@@ -1,0 +1,10 @@
+-- read up on: principal curvature
+-- SDFs and refraction
+-- render aist dancers with sdfs
+-- multi-step pipeline: position; then luminance
+-- play more with shape composition and distortion
+-- with multi-step pipeline: hatching approaches (in cpu first)
+-- overlay 2d canvas to visualize 3d vector fields
+-- controls
+-- rando distro shading SDF surfaces: point dithering; lines
+-- per-frame rener + moviefy w/ffmpeg
