@@ -1,17 +1,24 @@
-const canvas = document.getElementById("c");
+const canvasC = document.getElementById("c");
+const canvasD = document.getElementById("d");
 const devicePixelRatio = window.devicePixelRatio || 1;
 let canvasWidth, canvasHeight, aspect;
 
 function init(prog, fullScreen = true) {
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (fullScreen) initFullScreen();
-    else initFixed();
+    if (fullScreen) {
+      initFullScreen(canvasC);
+      initFullScreen(canvasD);
+    }
+    else {
+      initFixed(canvasC);
+      initFixed(canvasD);
+    }
     if (prog) prog();
   });
 }
 
-function initFixed() {
+function initFixed(canvas) {
   let elmWidth = 740;
   let elmHeight = 525;
   aspect = elmWidth / elmHeight;
