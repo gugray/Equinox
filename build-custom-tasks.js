@@ -42,23 +42,23 @@ exports = (options = {}) => {
       // and also save them in version.html
       build.onEnd(async result => {
         // Copy css from /src to /public
-        let cssText = await fs.promises.readFile("src/sketch.css", "utf8");
-        await fs.promises.writeFile("public/sketch.css", cssText);
+        let cssText = await fs.promises.readFile("src/app.css", "utf8");
+        await fs.promises.writeFile("public/app.css", cssText);
         // Get hashes
-        let appJsHash = await getHash("public/sketch.js");
-        let appCssHash = await getHash("public/sketch.css");
+        let appJsHash = await getHash("public/app.js");
+        let appCssHash = await getHash("public/app.css");
         let indexHtml = await fs.promises.readFile("src/index.html", "utf8");
         if (options.prod) {
           indexHtml = indexHtml.replace("./bundle.js", "./bundle.js?v=" + appJsHash);
-          indexHtml = indexHtml.replace("./sketch.css", "./sketch.css?v=" + appCssHash);
+          indexHtml = indexHtml.replace("./app.css", "./app.css?v=" + appCssHash);
           indexHtml = indexHtml.replace(/<!--LiveReload-->.*<!--LiveReload-->/is, "");
         }
         await fs.promises.writeFile("public/index.html", indexHtml);
         let hashesTogether = appJsHash + "\n" + appCssHash;
         if (hashesTogether.length != 65) throw "wrong combined hash length";
         await fs.promises.writeFile("public/hashes.html", hashesTogether);
-        // Rename sketch.js in target folder to bundle.js
-        await fs.promises.rename("public/sketch.js", "public/bundle.js");
+        // Rename app.js in target folder to bundle.js
+        await fs.promises.rename("public/app.js", "public/bundle.js");
       });
     }
   };

@@ -4,7 +4,7 @@ html, body {
   background-color: #282828;
 }
 body { overflow-y: scroll; }
-canvas { display: block; }
+canvas { display: none; }
 canvas#c { background-color: black; }
 canvas#d { background-color: transparent; }
 p.note {

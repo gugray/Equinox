@@ -7,14 +7,12 @@
     "name": "Gábor L Ugray",
     "email": "gabor.reads.this@gmail.com"
   },
-  "devDependencies": {
-    "esbuild": "^0.14.21",
-    "esbuild-plugin-glslify": "^1.0.1",
-    "livereload": "^0.9.3",
-    "md5": "^2.3.0",
-    "static-server": "^2.2.1",
+  "dependencies": {
     "twgl.js": "^5.3.1"
   },
-  "dependencies": {
+  "devDependencies": {
+    "esbuild": "^0.14.21",
+    "livereload": "^0.9.3",
+    "static-server": "^2.2.1"
   }
 }

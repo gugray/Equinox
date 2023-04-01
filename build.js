@@ -6,6 +6,7 @@ async function build() {
   const { default: glslify } = await import("esbuild-plugin-glslify");
   const livereload = require("livereload");
   const customTasks = require("./build-custom-tasks");
+  const myGlsl = require("./build-my-glsl.js");
   const staticServer = require("static-server");
 
   const args = (argList => {
@@ -44,19 +45,16 @@ async function build() {
     };
   }
 
-  const sketchName = "current/" + args.sketch + "/sketch.js";
+  const sketchName = "current/" + args.sketch + "/app.js";
 
   esbuild.build({
     entryPoints: [sketchName],
-    outfile: "public/sketch.js",
+    outfile: "public/app.js",
     bundle: true,
     sourcemap: !args.prod,
     minify: args.prod,
     plugins: [
-      glslify({
-        extensions: ['vs', 'fs', '.glsl', '.frag.shader'],
-        compress: false,
-      }),
+      myGlsl(),
       customTasks({prod}),
     ],
     watch: watch,

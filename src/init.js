@@ -14,8 +14,16 @@ function init(prog, fullScreen = true) {
       initFixed(canvasC);
       initFixed(canvasD);
     }
+    moveCanvasD();
     if (prog) prog();
   });
+}
+
+function moveCanvasD() {
+  canvasD.style.position = "absolute";
+  canvasD.style.top = canvasC.clientTop + "px";
+  canvasD.style.left = canvasC.offsetLeft + "px";
+  // canvasD.style.backgroundColor = "magenta";
 }
 
 function initFixed(canvas) {
@@ -35,7 +43,7 @@ function initFixed(canvas) {
 
 }
 
-function initFullScreen() {
+function initFullScreen(canvas) {
   // Size, position and show canvas element
   let elmWidth = window.innerWidth;
   let elmHeight = window.innerHeight;
