@@ -1,8 +1,10 @@
-import {init} from "../../src/init.js";
-import * as twgl from "twgl.js";
 import vs from "./vert.glsl";
 import fs from "./frag.glsl";
 import fs_normals from "./frag_normals.glsl";
+import fs_lights from "./frag_lights.glsl";
+
+import {init} from "../../src/init.js";
+import * as twgl from "twgl.js";
 
 init(doShit, false);
 
@@ -39,22 +41,42 @@ function doShit() {
   twgl.bindFramebufferInfo(gl, frameBufferInfo);
   twgl.drawBufferInfo(gl, bufferInfo);
 
-  let txData = new Float32Array(w * h * 4);
-  gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, txData);
+  let dataNormals = new Float32Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, dataNormals);
 
-  const canvasD = document.getElementById("d");
-  const ctx = canvasD.getContext("2d");
-  const imgd = ctx.getImageData(0, 0, w, h);
-  const clr = [0, 0, 0];
-  for (let x = 0; x < w; ++x) {
-    for (let y = 0; y < h; ++y) {
-      const r = txData[(y * w + x) * 4] * 255;
-      const g = txData[(y * w + x) * 4 + 1] * 255;
-      const b = txData[(y * w + x) * 4 + 2] * 255;
-      setPixel(imgd, x, h - y, r, g, b);
-    }
-  }
-  ctx.putImageData(imgd, 0, 0);
+  let txNormals = twgl.createTexture(gl, {
+    internalFormat: gl.RGBA32F,
+    format: gl.RGBA,
+    type: gl.FLOAT,
+    width: w,
+    height: h,
+    src: dataNormals,
+  });
+  const uniformsLights = {
+    time: 0,
+    resolution: [gl.canvas.width, gl.canvas.height],
+    normals: txNormals,
+  };
+  const progLights = twgl.createProgramInfo(gl, [vs, fs_lights]);
+  gl.useProgram(progLights.program);
+  twgl.setBuffersAndAttributes(gl, progLights, bufferInfo);
+  twgl.setUniforms(progLights, uniformsLights);
+  twgl.bindFramebufferInfo(gl, null);
+  twgl.drawBufferInfo(gl, bufferInfo);
+
+  // const canvasD = document.getElementById("d");
+  // const ctx = canvasD.getContext("2d");
+  // const imgd = ctx.getImageData(0, 0, w, h);
+  // const clr = [0, 0, 0];
+  // for (let x = 0; x < w; ++x) {
+  //   for (let y = 0; y < h; ++y) {
+  //     const r = txNormals[(y * w + x) * 4] * 255;
+  //     const g = txNormals[(y * w + x) * 4 + 1] * 255;
+  //     const b = txNormals[(y * w + x) * 4 + 2] * 255;
+  //     setPixel(imgd, x, h - y, r, g, b);
+  //   }
+  // }
+  // ctx.putImageData(imgd, 0, 0);
 
 }
 

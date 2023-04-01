@@ -5,9 +5,11 @@ const reInclude1 = /#include +\"([^\"]+)\"/dgis;
 const reInclude2 = /#include +'([^']+)'/dgis;
 
 async function resolve(fn, resolvedFiles) {
+
   if (resolvedFiles.includes(fn))
     return "";
   resolvedFiles.push(fn);
+
   const dir = path.dirname(fn);
   let cont = await fs.promises.readFile(fn, "utf8");
   while (true) {

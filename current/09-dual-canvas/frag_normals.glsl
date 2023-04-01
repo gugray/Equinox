@@ -1,7 +1,10 @@
-precision mediump float;
+#version 300 es
+precision highp float;
 
 // https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/
 // https://michaelwalczyk.com/blog-ray-marching.html
+
+out vec4 outColor;
 
 uniform vec2 resolution;
 uniform float time;
@@ -64,7 +67,7 @@ void main() {
 
     if (dist > MAX_DIST - EPSILON) {
         // Didn't hit anything
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        outColor = vec4(0.0, 0.0, 0.0, 0.0);
         return;
     }
 
@@ -72,5 +75,5 @@ void main() {
     vec3 p = eye + dist * worldDir;
     vec3 normal = estimateNormal(p);
 
-    gl_FragColor = vec4(normal, 1.0);
+    outColor = vec4(normal, 1.0);
 }
