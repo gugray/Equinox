@@ -12,28 +12,9 @@ const float MAX_DIST = 50.0;
 const float EPSILON = 0.0001;
 
 #include "geo.glsl"
+#include "sdf.glsl"
+#include "scene.glsl"
 
-/**
- * Signed distance function for a sphere centered at the origin with radius 1.0;
- */
-float sphereSDF(vec3 samplePoint) {
-    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);
-    center = vec3(0.);
-    return length(samplePoint - center) - 1.;
-}
-
-/**
- * Signed distance function describing the scene.
- *
- * Absolute value of the return value indicates the distance to the surface.
- * Sign indicates whether the point is inside or outside the surface,
- * negative indicating inside.
- */
-float sceneSDF(vec3 p) {
-    float d = sphereSDF(p);
-    float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;
-    return d + glump;
-}
 
 /**
  * Using the gradient of the SDF, estimate the normal on the surface at point p.
@@ -71,18 +52,6 @@ float shortestDistanceToSurface(vec3 eye, vec3 marchingDirection, float start, f
     return end;
 }
 
-/**
- * Return the normalized direction to march in from the eye point for a single pixel.
- *
- * fieldOfView: vertical field of view in degrees
- * size: resolution of the output image
- * fragCoord: the x,y coordinate of the pixel in the output image
- */
-vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
-    vec2 xy = fragCoord - size / 2.0;
-    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;
-    return normalize(vec3(xy, -z));
-}
 
 /**
  * Lighting contribution of a single point light source via Phong illumination.

@@ -1,7 +1,8 @@
 import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
-import fs from "./frag.glsl";
 import vs from "./vert.glsl";
+import fs from "./frag.glsl";
+import fs_normals from "./frag_normals.glsl";
 
 init(doShit, false);
 
@@ -11,7 +12,6 @@ function doShit() {
   const h = canvasC.height;
   const gl = document.querySelector("#c").getContext("webgl2");
   twgl.addExtensionsToContext(gl);
-  const programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
   const arrays = {
     position: {numComponents: 2, data: [-1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, 1]},
@@ -23,22 +23,24 @@ function doShit() {
     time: 0,
     resolution: [gl.canvas.width, gl.canvas.height],
   };
-  gl.useProgram(programInfo.program);
-  twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
-  twgl.setUniforms(programInfo, uniforms);
 
-  const attachments = [
-    { format: gl.RGBA },
-  ];
+  // const prog1 = twgl.createProgramInfo(gl, [vs, fs]);
+  // gl.useProgram(prog1.program);
+  // twgl.setBuffersAndAttributes(gl, prog1, bufferInfo);
+  // twgl.setUniforms(prog1, uniforms);
+  // twgl.drawBufferInfo(gl, bufferInfo);
 
-  twgl.drawBufferInfo(gl, bufferInfo);
-
+  const progNormals = twgl.createProgramInfo(gl, [vs, fs_normals]);
+  gl.useProgram(progNormals.program);
+  twgl.setBuffersAndAttributes(gl, progNormals, bufferInfo);
+  twgl.setUniforms(progNormals, uniforms);
+  const attachments = [{internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT}];
   const frameBufferInfo = twgl.createFramebufferInfo(gl, attachments, w, h);
   twgl.bindFramebufferInfo(gl, frameBufferInfo);
   twgl.drawBufferInfo(gl, bufferInfo);
 
-  let txData = new Uint8Array(w * h * 4);
-  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, txData);
+  let txData = new Float32Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, txData);
 
   const canvasD = document.getElementById("d");
   const ctx = canvasD.getContext("2d");
@@ -46,13 +48,14 @@ function doShit() {
   const clr = [0, 0, 0];
   for (let x = 0; x < w; ++x) {
     for (let y = 0; y < h; ++y) {
-      const r = txData[(y * w + x) * 4];
-      const g = txData[(y * w + x) * 4 + 1];
-      const b = txData[(y * w + x) * 4 + 2];
+      const r = txData[(y * w + x) * 4] * 255;
+      const g = txData[(y * w + x) * 4 + 1] * 255;
+      const b = txData[(y * w + x) * 4 + 2] * 255;
       setPixel(imgd, x, h - y, r, g, b);
     }
   }
   ctx.putImageData(imgd, 0, 0);
+
 }
 
 
