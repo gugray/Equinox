@@ -38,12 +38,9 @@ const float EPSILON = 0.0001;
  */
 vec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 p, vec3 eye, vec3 lightPos, vec3 lightIntensity) {
 
-    // TODO: Get from sampler
-    //vec3 N = estimateNormal(p);
     ivec2 coords = ivec2(uv);
     vec3 N = texelFetch(normals, coords, 0).xyz;
 
-    
     vec3 L = normalize(lightPos - p);
     vec3 V = normalize(eye - p);
     vec3 R = normalize(reflect(-L, N));

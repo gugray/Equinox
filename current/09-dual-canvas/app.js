@@ -63,7 +63,7 @@ function doShit() {
   twgl.setUniforms(progLights, uniformsLights);
   twgl.bindFramebufferInfo(gl, null);
   twgl.drawBufferInfo(gl, bufferInfo);
-
+  
   // const canvasD = document.getElementById("d");
   // const ctx = canvasD.getContext("2d");
   // const imgd = ctx.getImageData(0, 0, w, h);
