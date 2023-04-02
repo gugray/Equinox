@@ -34,7 +34,7 @@ function initFixed(canvas) {
   canvas.style.height = elmHeight + "px";
   canvas.style.margin = "50px auto 0 auto";
   canvas.style.display = "block";
-  canvas.style.border = "border: 1px solid hsl(67, 0%, 40%)";
+  //canvas.style.border = "border: 1px solid hsl(67, 0%, 40%)";
 
   canvasWidth = elmWidth * devicePixelRatio;
   canvasHeight = elmHeight * devicePixelRatio;

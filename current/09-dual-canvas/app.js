@@ -90,19 +90,7 @@ function doShit() {
   twgl.bindFramebufferInfo(gl, null);
   twgl.drawBufferInfo(gl, bufferInfo);
 
-  // const canvasD = document.getElementById("d");
-  // const ctx = canvasD.getContext("2d");
-  // const imgd = ctx.getImageData(0, 0, w, h);
-  // const clr = [0, 0, 0];
-  // for (let x = 0; x < w; ++x) {
-  //   for (let y = 0; y < h; ++y) {
-  //     const r = txNormals[(y * w + x) * 4] * 255;
-  //     const g = txNormals[(y * w + x) * 4 + 1] * 255;
-  //     const b = txNormals[(y * w + x) * 4 + 2] * 255;
-  //     setPixel(imgd, x, h - y, r, g, b);
-  //   }
-  // }
-  // ctx.putImageData(imgd, 0, 0);
+  drawFieldGrid(data_normals, 20);
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
@@ -110,9 +98,45 @@ function doShit() {
 
 }
 
+function drawFieldGrid(data, idealGridStep) {
+  const canvas = document.getElementById("d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const nx = Math.round((w-1) / idealGridStep);
+  const xStep = (w-1)/nx;
+  const ny = Math.round((h-1) / idealGridStep);
+  const yStep = (h-1)/ny;
+
+  const ctx = canvas.getContext("2d");
+  // const imgd = ctx.getImageData(0, 0, w, h);
+  const vec = [0, 0, 0, 0];
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  for (let ix = 0; ix <= nx; ++ix) {
+    for (let iy = 0; iy <= ny - 1; ++iy) {
+      const x = Math.round(ix * xStep);
+      const y = Math.round(iy * yStep);
+      getVec4(data, w, x, y, vec);
+      const mul = 15;
+      const dx = Math.round(mul * vec[0]);
+      const dy = Math.round(mul * vec[1]);
+      ctx.moveTo(x, h - y - 1);
+      ctx.lineTo(x + dx, h - y - dy - 1);
+    }
+  }
+  ctx.stroke();
+  // ctx.putImageData(imgd, 0, 0);
+}
+
+function getVec4(data, w, x, y, vec) {
+  for (let i = 0; i < 4; ++i)
+    vec[i] = data[(y * w + x) * 4 + i];
+}
 
 function setPixel(imgd, x, y, r, g, b) {
   const w = imgd.width;
+  const h = imgd.height;
+  y = h - y - 1;
   imgd.data[(y * w + x) * 4] = Math.round(r);
   imgd.data[(y * w + x) * 4 + 1] = Math.round(g);
   imgd.data[(y * w + x) * 4 + 2] = Math.round(b);

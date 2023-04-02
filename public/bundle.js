@@ -45,7 +45,6 @@
     canvas.style.height = elmHeight + "px";
     canvas.style.margin = "50px auto 0 auto";
     canvas.style.display = "block";
-    canvas.style.border = "border: 1px solid hsl(67, 0%, 40%)";
     canvasWidth = elmWidth * devicePixelRatio;
     canvasHeight = elmHeight * devicePixelRatio;
     canvas.width = canvasWidth;
@@ -3972,9 +3971,40 @@ ${errors.filter((_) => _).join("\n")}`;
     setUniforms(p_lights, u_lights);
     bindFramebufferInfo(gl, null);
     drawBufferInfo(gl, bufferInfo);
+    drawFieldGrid(data_normals, 20);
     const endTime = performance.now();
     const elapsed = endTime - startTime;
     console.log(elapsed);
+  }
+  function drawFieldGrid(data, idealGridStep) {
+    const canvas = document.getElementById("d");
+    const w = canvas.width;
+    const h = canvas.height;
+    const nx = Math.round((w - 1) / idealGridStep);
+    const xStep = (w - 1) / nx;
+    const ny = Math.round((h - 1) / idealGridStep);
+    const yStep = (h - 1) / ny;
+    const ctx = canvas.getContext("2d");
+    const vec = [0, 0, 0, 0];
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    for (let ix = 0; ix <= nx; ++ix) {
+      for (let iy = 0; iy <= ny - 1; ++iy) {
+        const x = Math.round(ix * xStep);
+        const y = Math.round(iy * yStep);
+        getVec4(data, w, x, y, vec);
+        const mul = 15;
+        const dx = Math.round(mul * vec[0]);
+        const dy = Math.round(mul * vec[1]);
+        ctx.moveTo(x, h - y - 1);
+        ctx.lineTo(x + dx, h - y - dy - 1);
+      }
+    }
+    ctx.stroke();
+  }
+  function getVec4(data, w, x, y, vec) {
+    for (let i = 0; i < 4; ++i)
+      vec[i] = data[(y * w + x) * 4 + i];
   }
 })();
 /* @license twgl.js 5.3.1 Copyright (c) 2015, Gregg Tavares All Rights Reserved.
