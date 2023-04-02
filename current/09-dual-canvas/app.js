@@ -3,6 +3,7 @@ import fs from "./frag.glsl";
 import fs_surface from "./frag_surface.glsl";
 import fs_normals from "./frag_normals.glsl";
 import fs_lights from "./frag_lights.glsl";
+import fs_gradients from "./frag_gradients.glsl";
 
 import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
@@ -79,7 +80,7 @@ function doShit() {
   // Calculate (and render) lighting
   const u_lights = {
     time: 0,
-    resolution: [gl.canvas.width, gl.canvas.height],
+    resolution: [w, h],
     normals: tx_normals,
     surface: tx_surface,
   };
@@ -90,7 +91,44 @@ function doShit() {
   twgl.bindFramebufferInfo(gl, null);
   twgl.drawBufferInfo(gl, bufferInfo);
 
-  drawFieldGrid(data_normals, 20);
+  // Render again, fetch as data
+  twgl.bindFramebufferInfo(gl, framebuf);
+  twgl.drawBufferInfo(gl, bufferInfo);
+  // Fetch results
+  const data_difflight = new Float32Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, data_difflight);
+  const tx_difflight = twgl.createTexture(gl, {
+    internalFormat: gl.RGBA32F,
+    format: gl.RGBA,
+    type: gl.FLOAT,
+    width: w,
+    height: h,
+    src: data_difflight,
+  });
+
+  // Calculate brightness gradients
+  const u_gradients = {
+    time: 0,
+    resolution: [w, h],
+    difflight: tx_difflight,
+  };
+  const p_gradients = twgl.createProgramInfo(gl, [vs, fs_gradients]);
+  gl.useProgram(p_gradients.program);
+  twgl.setBuffersAndAttributes(gl, p_gradients, bufferInfo);
+  twgl.setUniforms(p_gradients, u_gradients);
+  twgl.bindFramebufferInfo(gl, framebuf);
+  twgl.drawBufferInfo(gl, bufferInfo);
+  // Fetch results
+  const data_gradients = new Float32Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, data_gradients);
+
+
+  drawFieldGrid(15, (x, y, vec) => {
+    getVec4(data_gradients, w, x, y, vec);
+    const len = Math.sqrt(vec[0]**2 + vec[1]**2);
+    vec[0] *= 10 / len;
+    vec[1] *= 10 / len;
+  });
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
@@ -98,7 +136,7 @@ function doShit() {
 
 }
 
-function drawFieldGrid(data, idealGridStep) {
+function drawFieldGrid(idealGridStep, getData) {
   const canvas = document.getElementById("d");
   const w = canvas.width;
   const h = canvas.height;
@@ -108,7 +146,6 @@ function drawFieldGrid(data, idealGridStep) {
   const yStep = (h-1)/ny;
 
   const ctx = canvas.getContext("2d");
-  // const imgd = ctx.getImageData(0, 0, w, h);
   const vec = [0, 0, 0, 0];
   ctx.strokeStyle = "white";
   ctx.lineWidth = 2;
@@ -116,16 +153,14 @@ function drawFieldGrid(data, idealGridStep) {
     for (let iy = 0; iy <= ny - 1; ++iy) {
       const x = Math.round(ix * xStep);
       const y = Math.round(iy * yStep);
-      getVec4(data, w, x, y, vec);
-      const mul = 15;
-      const dx = Math.round(mul * vec[0]);
-      const dy = Math.round(mul * vec[1]);
+      getData(x, y, vec);
+      const dx = Math.round(vec[0]);
+      const dy = Math.round(vec[1]);
       ctx.moveTo(x, h - y - 1);
       ctx.lineTo(x + dx, h - y - dy - 1);
     }
   }
   ctx.stroke();
-  // ctx.putImageData(imgd, 0, 0);
 }
 
 function getVec4(data, w, x, y, vec) {

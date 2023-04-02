@@ -86,6 +86,11 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 
     return color;
 }
 
+float diffuseIllumination(vec3 p, vec3 normal, vec3 eye) {
+    vec3 dir = normalize(eye - p);
+    return dot(normal, dir);
+}
+
 void main() {
 
     vec3 eye = vec3(5. * sin(time), 0., 5. * cos(time));
@@ -100,12 +105,20 @@ void main() {
         return;
     }
 
+    // Simple diffuse shading (Lambertian reflectance)
+    // Light colocated with the viewer
+    vec3 normal = texelFetch(normals, coords, 0).xyz;
+    float lum = diffuseIllumination(p, normal, eye);
+    vec3 clr = vec3(1.0, 0.5, 0.1);
+    outColor = vec4(lum * clr, 1.0);
+
+    return;
+
+    // Phong illumunation
     vec3 K_a = vec3(0.3, 0.3, 0.4);
     vec3 K_d = vec3(0.7, 0.7, 0.);
     vec3 K_s = vec3(1.9, 1.9, 0.);
     float shininess = 100.;
-
     vec3 color = phongIllumination(K_a, K_d, K_s, shininess, gl_FragCoord.xy, p, eye);
-
     outColor = vec4(color, 1.0);
 }

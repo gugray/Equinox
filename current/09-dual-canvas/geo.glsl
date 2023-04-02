@@ -1,3 +1,9 @@
+#define PI 3.1415926535897932384626433832795
+
+float dot2( in vec2 v ) { return dot(v,v); }
+float dot2( in vec3 v ) { return dot(v,v); }
+float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
+
 // Rotation matrix around the X axis
 mat3 rotateX(float theta) {
     float c = cos(theta);
