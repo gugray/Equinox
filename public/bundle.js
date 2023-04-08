@@ -1,17 +1,17 @@
 (() => {
-  // my-glsl:/Users/gabor/DevC/ShadeMed/current/09-dual-canvas/vert.glsl
+  // my-glsl:/Users/gabor/DevC/ShadeMed/current/10-hatch/vert.glsl
   var vert_default = "#version 300 es\n\nin vec4 position;\n\nvoid main() {\n    // This is [-1, 1] for both X and Y\n    gl_Position = position;\n}\n";
 
-  // my-glsl:/Users/gabor/DevC/ShadeMed/current/09-dual-canvas/frag_surface.glsl
-  var frag_surface_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.5);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n/**\n * Return the shortest distance from the eyepoint to the scene surface along\n * the marching direction. If no part of the surface is found between start and end,\n * return end.\n *\n * eye: the eye point, acting as the origin of the ray\n * marchingDirection: the normalized direction to march in\n * start: the starting distance away from the eye\n * end: the max distance away from the ey to march before giving up\n */\nfloat march(vec3 eye, vec3 marchingDirection, float start, float end) {\n    float depth = start;\n    for (int i = 0; i < MAX_MARCHING_STEPS; i++) {\n        float dist = sceneSDF(eye + depth * marchingDirection);\n        if (dist < EPSILON) {\n            return depth;\n        }\n        depth += dist;\n        if (depth >= end) {\n            return end;\n        }\n    }\n    return end;\n}\n\n\nvoid main() {\n    vec3 viewDir = rayDirection(45.0, resolution.xy, gl_FragCoord.xy);\n    vec3 eye = vec3(5. * sin(time), 0., 5. * cos(time));\n    mat4 viewToWorld = viewMatrix(eye, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));\n    vec3 worldDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;\n\n    float dist = march(eye, worldDir, MIN_DIST, MAX_DIST);\n\n    // Didn't hit anything\n    if (dist > MAX_DIST - EPSILON) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    // The closest point on the surface to the eyepoint along the view ray\n    vec3 p = eye + dist * worldDir;\n    outColor = vec4(p, 1.0);\n}\n";
+  // my-glsl:/Users/gabor/DevC/ShadeMed/current/10-hatch/frag_surface.glsl
+  var frag_surface_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.2);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n/**\n * Return the shortest distance from the eyepoint to the scene surface along\n * the marching direction. If no part of the surface is found between start and end,\n * return end.\n *\n * eye: the eye point, acting as the origin of the ray\n * marchingDirection: the normalized direction to march in\n * start: the starting distance away from the eye\n * end: the max distance away from the ey to march before giving up\n */\nfloat march(vec3 eye, vec3 marchingDirection, float start, float end) {\n    float depth = start;\n    for (int i = 0; i < MAX_MARCHING_STEPS; i++) {\n        float dist = sceneSDF(eye + depth * marchingDirection);\n        if (dist < EPSILON) {\n            return depth;\n        }\n        depth += dist;\n        if (depth >= end) {\n            return end;\n        }\n    }\n    return end;\n}\n\n\nvoid main() {\n    vec3 viewDir = rayDirection(45.0, resolution.xy, gl_FragCoord.xy);\n    vec3 eye = vec3(5. * sin(time), 0., 5. * cos(time));\n    mat4 viewToWorld = viewMatrix(eye, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));\n    vec3 worldDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;\n\n    float dist = march(eye, worldDir, MIN_DIST, MAX_DIST);\n\n    // Didn't hit anything\n    if (dist > MAX_DIST - EPSILON) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    // The closest point on the surface to the eyepoint along the view ray\n    vec3 p = eye + dist * worldDir;\n    outColor = vec4(p, 1.0);\n}\n";
 
-  // my-glsl:/Users/gabor/DevC/ShadeMed/current/09-dual-canvas/frag_normals.glsl
-  var frag_normals_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\nuniform sampler2D surface;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.5);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n\n\n/**\n * Using the gradient of the SDF, estimate the normal on the surface at point p.\n */\nvec3 estimateNormal(vec3 p) {\n    return normalize(vec3(\n    sceneSDF(vec3(p.x + EPSILON, p.y, p.z)) - sceneSDF(vec3(p.x - EPSILON, p.y, p.z)),\n    sceneSDF(vec3(p.x, p.y + EPSILON, p.z)) - sceneSDF(vec3(p.x, p.y - EPSILON, p.z)),\n    sceneSDF(vec3(p.x, p.y, p.z  + EPSILON)) - sceneSDF(vec3(p.x, p.y, p.z - EPSILON))\n    ));\n}\n\nvoid main() {\n    // Previously calculated surface position at this pixel\n    ivec2 coords = ivec2(gl_FragCoord.xy);\n    vec3 p = texelFetch(surface, coords, 0).xyz;\n\n    // No object here\n    if (p.z == 0.0) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    vec3 normal = estimateNormal(p);\n    outColor = vec4(normal, 1.0);\n}\n";
+  // my-glsl:/Users/gabor/DevC/ShadeMed/current/10-hatch/frag_normals.glsl
+  var frag_normals_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\nuniform sampler2D surface;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.2);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n\n\n/**\n * Using the gradient of the SDF, estimate the normal on the surface at point p.\n */\nvec3 estimateNormal(vec3 p) {\n    return normalize(vec3(\n    sceneSDF(vec3(p.x + EPSILON, p.y, p.z)) - sceneSDF(vec3(p.x - EPSILON, p.y, p.z)),\n    sceneSDF(vec3(p.x, p.y + EPSILON, p.z)) - sceneSDF(vec3(p.x, p.y - EPSILON, p.z)),\n    sceneSDF(vec3(p.x, p.y, p.z  + EPSILON)) - sceneSDF(vec3(p.x, p.y, p.z - EPSILON))\n    ));\n}\n\nvoid main() {\n    // Previously calculated surface position at this pixel\n    ivec2 coords = ivec2(gl_FragCoord.xy);\n    vec3 p = texelFetch(surface, coords, 0).xyz;\n\n    // No object here\n    if (p.z == 0.0) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    vec3 normal = estimateNormal(p);\n    outColor = vec4(normal, 1.0);\n}\n";
 
-  // my-glsl:/Users/gabor/DevC/ShadeMed/current/09-dual-canvas/frag_lights.glsl
-  var frag_lights_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\nuniform sampler2D surface;\nuniform sampler2D normals;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.5);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n/**\n * Return the shortest distance from the eyepoint to the scene surface along\n * the marching direction. If no part of the surface is found between start and end,\n * return end.\n *\n * eye: the eye point, acting as the origin of the ray\n * marchingDirection: the normalized direction to march in\n * start: the starting distance away from the eye\n * end: the max distance away from the ey to march before giving up\n */\nfloat march(vec3 eye, vec3 marchingDirection, float start, float end) {\n    float depth = start;\n    for (int i = 0; i < MAX_MARCHING_STEPS; i++) {\n        float dist = sceneSDF(eye + depth * marchingDirection);\n        if (dist < EPSILON) {\n            return depth;\n        }\n        depth += dist;\n        if (depth >= end) {\n            return end;\n        }\n    }\n    return end;\n}\n\n\n/**\n * Lighting contribution of a single point light source via Phong illumination.\n *\n * The vec3 returned is the RGB color of the light's contribution.\n *\n * k_a: Ambient color\n * k_d: Diffuse color\n * k_s: Specular color\n * alpha: Shininess coefficient\n * p: position of point being lit\n * eye: the position of the camera\n * lightPos: the position of the light\n * lightIntensity: color/intensity of the light\n *\n * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description\n */\nvec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 p, vec3 eye, vec3 lightPos, vec3 lightIntensity) {\n\n    ivec2 coords = ivec2(uv);\n    vec3 N = texelFetch(normals, coords, 0).xyz;\n\n    vec3 L = normalize(lightPos - p);\n    vec3 V = normalize(eye - p);\n    vec3 R = normalize(reflect(-L, N));\n\n    float dotLN = dot(L, N);\n    float dotRV = dot(R, V);\n\n    if (dotLN < 0.0) {\n        // Light not visible from this point on the surface\n        return vec3(0.0, 0.0, 0.0);\n    }\n\n    if (dotRV < 0.0) {\n        // Light reflection in opposite direction as viewer, apply only diffuse\n        // component\n        return lightIntensity * (k_d * dotLN);\n    }\n    return lightIntensity * (k_d * dotLN + k_s * pow(dotRV, alpha));\n}\n\n/**\n * Lighting via Phong illumination.\n *\n * The vec3 returned is the RGB color of that point after lighting is applied.\n * k_a: Ambient color\n * k_d: Diffuse color\n * k_s: Specular color\n * alpha: Shininess coefficient\n * p: position of point being lit\n * eye: the position of the camera\n *\n * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description\n */\nvec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 p, vec3 eye) {\n\n    const vec3 ambientLight = 0.5 * vec3(1.0, 1.0, 1.0);\n    vec3 color = ambientLight * k_a;\n\n    vec3 light1Pos = vec3(4.0 * sin(time), 2.0, 4.0 * cos(time));\n    vec3 light1Intensity = vec3(0.4, 0.4, 0.4);\n    color += phongContribForLight(k_d, k_s, alpha, uv, p, eye, light1Pos, light1Intensity);\n\n    vec3 light2Pos = vec3(2.0 * sin(0.37 * time), 2.0 * cos(0.37 * time), 2.0);\n    vec3 light2Intensity = vec3(0.4, 0.4, 0.4);\n    color += phongContribForLight(k_d, k_s, alpha, uv, p, eye, light2Pos, light2Intensity);\n    return color;\n}\n\nfloat diffuseIllumination(vec3 p, vec3 normal, vec3 eye) {\n    vec3 dir = normalize(eye - p);\n    return dot(normal, dir);\n}\n\nvoid main() {\n\n    vec3 eye = vec3(5. * sin(time), 0., 5. * cos(time));\n\n    // Previously calculated surface position at this pixel\n    ivec2 coords = ivec2(gl_FragCoord.xy);\n    vec3 p = texelFetch(surface, coords, 0).xyz;\n\n    // No object here\n    if (p.z == 0.0) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    // Simple diffuse shading (Lambertian reflectance)\n    // Light colocated with the viewer\n    vec3 normal = texelFetch(normals, coords, 0).xyz;\n    float lum = diffuseIllumination(p, normal, eye);\n    vec3 clr = vec3(1.0, 0.5, 0.1);\n    outColor = vec4(lum * clr, 1.0);\n\n    return;\n\n    // Phong illumunation\n    vec3 K_a = vec3(0.3, 0.3, 0.4);\n    vec3 K_d = vec3(0.7, 0.7, 0.);\n    vec3 K_s = vec3(1.9, 1.9, 0.);\n    float shininess = 100.;\n    vec3 color = phongIllumination(K_a, K_d, K_s, shininess, gl_FragCoord.xy, p, eye);\n    outColor = vec4(color, 1.0);\n}\n";
+  // my-glsl:/Users/gabor/DevC/ShadeMed/current/10-hatch/frag_lights.glsl
+  var frag_lights_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\nuniform sampler2D surface;\nuniform sampler2D normals;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n#define PI 3.1415926535897932384626433832795\n\nfloat dot2( in vec2 v ) { return dot(v,v); }\nfloat dot2( in vec3 v ) { return dot(v,v); }\nfloat ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }\n\n// Rotation matrix around the X axis\nmat3 rotateX(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, c, -s),\n    vec3(0, s, c)\n    );\n}\n\n// Rotation matrix around the Y axis.\nmat3 rotateY(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, 0, s),\n    vec3(0, 1, 0),\n    vec3(-s, 0, c)\n    );\n}\n\n// Rotation matrix around the Z axis.\nmat3 rotateZ(float theta) {\n    float c = cos(theta);\n    float s = sin(theta);\n    return mat3(\n    vec3(c, -s, 0),\n    vec3(s, c, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n// Identity matrix.\nmat3 identity() {\n    return mat3(\n    vec3(1, 0, 0),\n    vec3(0, 1, 0),\n    vec3(0, 0, 1)\n    );\n}\n\n/**\n * Return a transformation matrix that will transform a ray from view space\n * to world coordinates, given the eye point, the camera target, and an up vector.\n *\n * This assumes that the center of the camera is aligned with the negative z axis in\n * view space when calculating the ray marching direction.\n */\nmat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {\n    vec3 f = normalize(center - eye);\n    vec3 s = normalize(cross(f, up));\n    vec3 u = cross(s, f);\n    return mat4(\n    vec4(s, 0.0),\n    vec4(u, 0.0),\n    vec4(-f, 0.0),\n    vec4(0.0, 0.0, 0.0, 1)\n    );\n}\n\n/**\n * Return the normalized direction to march in from the eye point for a single pixel.\n *\n * fieldOfView: vertical field of view in degrees\n * size: resolution of the output image\n * fragCoord: the x,y coordinate of the pixel in the output image\n */\nvec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {\n    vec2 xy = fragCoord - size / 2.0;\n    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;\n    return normalize(vec3(xy, -z));\n}\n\n\n/**\n * Signed distance function for a sphere centered at the origin with radius 1.0;\n */\nfloat sphereSDF(vec3 samplePoint) {\n    vec3 center = vec3(2. * sin(time), -2. * cos(time * 0.25), 0.);\n    center = vec3(0.);\n    return length(samplePoint - center) - 1.;\n}\n\nfloat sdTorus(vec3 p, vec2 t) {\n    vec2 q = vec2(length(p.xz)-t.x, p.y);\n    return length(q)-t.y;\n}\n\n\nfloat sceneSDF(vec3 p) {\n\n    mat3 t1 = rotateX(PI * 0.2);\n\n    return sdTorus(t1 * p, vec2(1, 0.5));\n\n    //float d = sphereSDF(p);\n    //float glump = (sin(2.0 * p.x) * sin(5.0 * p.y) * sin(7.0 * p.z)) * 0.25;\n    //return d + glump;\n}\n\n/**\n * Return the shortest distance from the eyepoint to the scene surface along\n * the marching direction. If no part of the surface is found between start and end,\n * return end.\n *\n * eye: the eye point, acting as the origin of the ray\n * marchingDirection: the normalized direction to march in\n * start: the starting distance away from the eye\n * end: the max distance away from the ey to march before giving up\n */\nfloat march(vec3 eye, vec3 marchingDirection, float start, float end) {\n    float depth = start;\n    for (int i = 0; i < MAX_MARCHING_STEPS; i++) {\n        float dist = sceneSDF(eye + depth * marchingDirection);\n        if (dist < EPSILON) {\n            return depth;\n        }\n        depth += dist;\n        if (depth >= end) {\n            return end;\n        }\n    }\n    return end;\n}\n\n\n/**\n * Lighting contribution of a single point light source via Phong illumination.\n *\n * The vec3 returned is the RGB color of the light's contribution.\n *\n * k_a: Ambient color\n * k_d: Diffuse color\n * k_s: Specular color\n * alpha: Shininess coefficient\n * p: position of point being lit\n * eye: the position of the camera\n * lightPos: the position of the light\n * lightIntensity: color/intensity of the light\n *\n * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description\n */\nvec3 phongContribForLight(vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 p, vec3 eye, vec3 lightPos, vec3 lightIntensity) {\n\n    ivec2 coords = ivec2(uv);\n    vec3 N = texelFetch(normals, coords, 0).xyz;\n\n    vec3 L = normalize(lightPos - p);\n    vec3 V = normalize(eye - p);\n    vec3 R = normalize(reflect(-L, N));\n\n    float dotLN = dot(L, N);\n    float dotRV = dot(R, V);\n\n    if (dotLN < 0.0) {\n        // Light not visible from this point on the surface\n        return vec3(0.0, 0.0, 0.0);\n    }\n\n    if (dotRV < 0.0) {\n        // Light reflection in opposite direction as viewer, apply only diffuse\n        // component\n        return lightIntensity * (k_d * dotLN);\n    }\n    return lightIntensity * (k_d * dotLN + k_s * pow(dotRV, alpha));\n}\n\n/**\n * Lighting via Phong illumination.\n *\n * The vec3 returned is the RGB color of that point after lighting is applied.\n * k_a: Ambient color\n * k_d: Diffuse color\n * k_s: Specular color\n * alpha: Shininess coefficient\n * p: position of point being lit\n * eye: the position of the camera\n *\n * See https://en.wikipedia.org/wiki/Phong_reflection_model#Description\n */\nvec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec2 uv, vec3 p, vec3 eye) {\n\n    const vec3 ambientLight = 0.5 * vec3(1.0, 1.0, 1.0);\n    vec3 color = ambientLight * k_a;\n\n    vec3 light1Pos = vec3(4.0 * sin(time), 2.0, 4.0 * cos(time));\n    vec3 light1Intensity = vec3(0.4, 0.4, 0.4);\n    color += phongContribForLight(k_d, k_s, alpha, uv, p, eye, light1Pos, light1Intensity);\n\n    vec3 light2Pos = vec3(2.0 * sin(0.37 * time), 2.0 * cos(0.37 * time), 2.0);\n    vec3 light2Intensity = vec3(0.4, 0.4, 0.4);\n    color += phongContribForLight(k_d, k_s, alpha, uv, p, eye, light2Pos, light2Intensity);\n    return color;\n}\n\nfloat diffuseIllumination(vec3 p, vec3 normal, vec3 eye) {\n    vec3 dir = normalize(eye - p);\n    return dot(normal, dir);\n}\n\nvoid main() {\n\n    vec3 eye = vec3(5. * sin(time), 0., 5. * cos(time));\n\n    // Previously calculated surface position at this pixel\n    ivec2 coords = ivec2(gl_FragCoord.xy);\n    vec3 p = texelFetch(surface, coords, 0).xyz;\n\n    // No object here\n    if (p.z == 0.0) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    // Simple diffuse shading (Lambertian reflectance)\n    // Light colocated with the viewer\n    vec3 normal = texelFetch(normals, coords, 0).xyz;\n    float lum = diffuseIllumination(p, normal, eye);\n    //vec3 clr = vec3(1.0, 0.5, 0.1);\n    vec3 clr = vec3(1.0, 1.0, 1.0);\n    outColor = vec4(lum * clr, 1.0);\n\n    return;\n\n    // Phong illumunation\n    vec3 K_a = vec3(0.3, 0.3, 0.4);\n    vec3 K_d = vec3(0.7, 0.7, 0.);\n    vec3 K_s = vec3(1.9, 1.9, 0.);\n    float shininess = 100.;\n    vec3 color = phongIllumination(K_a, K_d, K_s, shininess, gl_FragCoord.xy, p, eye);\n    outColor = vec4(color, 1.0);\n}\n";
 
-  // my-glsl:/Users/gabor/DevC/ShadeMed/current/09-dual-canvas/frag_gradients.glsl
+  // my-glsl:/Users/gabor/DevC/ShadeMed/current/10-hatch/frag_gradients.glsl
   var frag_gradients_default = "#version 300 es\nprecision highp float;\n\n// https://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/\n// https://michaelwalczyk.com/blog-ray-marching.html\n\nout vec4 outColor;\n\nuniform vec2 resolution;\nuniform float time;\nuniform sampler2D difflight;\n\nconst int MAX_MARCHING_STEPS = 255;\nconst float MIN_DIST = 0.0;\nconst float MAX_DIST = 50.0;\nconst float EPSILON = 0.0001;\n\n\nvoid main() {\n\n    ivec2 coords = ivec2(gl_FragCoord.xy);\n\n    // Avoid edges\n    ivec2 ires = ivec2(resolution);\n    if (coords.x == 0 || coords.y == 1 || coords.x == ires.x - 1 || coords.y == ires.y - 1) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    // Previously calculated color at surrounding pixels\n    ivec2 ptAbove = coords + ivec2(0, 1);\n    ivec2 ptBelow = coords + ivec2(0, -1);\n    ivec2 ptLeft = coords + ivec2(-1, 0);\n    ivec2 ptRight = coords + ivec2(1, 0);\n\n    vec4 clrAbove = texelFetch(difflight, ptAbove, 0);\n    vec4 clrBelow = texelFetch(difflight, ptBelow, 0);\n    vec4 clrLeft = texelFetch(difflight, ptLeft, 0);\n    vec4 clrRight = texelFetch(difflight, ptRight, 0);\n\n    // Falling off shape\n    if (clrAbove.w == 0. || clrBelow.w == 0. || clrRight.w == 0. || clrLeft.w == 0.) {\n        outColor = vec4(0.);\n        return;\n    }\n\n    float lumAbove = length(clrAbove.xyz);\n    float lumBelow = length(clrBelow.xyz);\n    float lumLeft = length(clrLeft.xyz);\n    float lumRight = length(clrRight.xyz);\n\n\n    vec2 grad = vec2(lumRight - lumLeft, lumAbove - lumBelow);\n\n    outColor = vec4(grad, 1.0, 1.0);\n}\n";
 
   // src/init.js
@@ -3905,10 +3905,226 @@ ${errors.filter((_) => _).join("\n")}`;
     }
   }
 
-  // current/09-dual-canvas/app.js
+  // current/10-hatch/app-hatch.js
+  var Vec2 = class {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.len = null;
+    }
+    length() {
+      if (this.len != null)
+        return this.len;
+      this.len = Math.sqrt(this.x ** 2 + this.y ** 2);
+      return this.len;
+    }
+    normalize() {
+      let len = this.length();
+      if (len == 0)
+        return;
+      this.x /= len;
+      this.y /= len;
+    }
+    multiply(val) {
+      return new Vec2(this.x * val, this.y * val);
+    }
+    add(pt) {
+      return new Vec2(this.x + pt.x, this.y + pt.y);
+    }
+    subtract(pt) {
+      return new Vec2(this.x - pt.x, this.y - pt.y);
+    }
+    clone() {
+      return new Vec2(this.x, this.y);
+    }
+  };
+  function shuffle(arr) {
+    let currIx = arr.length;
+    while (currIx != 0) {
+      let randIx = Math.floor(Math.random() * currIx);
+      currIx--;
+      [arr[currIx], arr[randIx]] = [arr[randIx], arr[currIx]];
+    }
+    return arr;
+  }
+  var FlowLineGenerator = class {
+    constructor({
+      width,
+      height,
+      fun,
+      stepSize,
+      maxLength,
+      densityFun,
+      minCellSize,
+      maxCellSize,
+      nShades,
+      logGrid
+    }) {
+      this.width = width;
+      this.height = height;
+      this.fun = fun;
+      this.densityFun = densityFun;
+      this.maxLength = maxLength;
+      this.stepSize = stepSize;
+      this.grid = new OccupancyGrid(width, height, minCellSize, maxCellSize, nShades, logGrid);
+      this.ixs = new Uint32Array(this.grid.nxArr[0] * this.grid.nyArr[0]);
+      for (let i = 0; i < this.ixs.length; ++i)
+        this.ixs[i] = i;
+      shuffle(this.ixs);
+      this.nextIx = 0;
+    }
+    getNextPt() {
+      while (true) {
+        if (this.nextIx == this.ixs.length)
+          return null;
+        const ix = this.ixs[this.nextIx];
+        const ny = Math.floor(ix / this.grid.nxArr[0]);
+        const nx = ix % this.grid.nxArr[0];
+        ++this.nextIx;
+        const res = new Vec2(
+          Math.floor((nx + Math.random()) * this.grid.cellWArr[0]),
+          Math.floor((ny + Math.random()) * this.grid.cellHArr[0])
+        );
+        if (!this.grid.isOccupied(res.x, res.y, 0))
+          return res;
+      }
+    }
+    genFlowLine() {
+      let startPt = this.getNextPt();
+      if (startPt == null)
+        return [null, 0];
+      const points = [startPt];
+      let flLength = 0;
+      if (this.fun(startPt) == null)
+        return [points, flLength];
+      let level = this.densityFun ? Math.round((this.grid.nyArr.length - 1) * this.densityFun(startPt)) : 0;
+      if (this.grid.isOccupied(startPt.x, startPt.y, level))
+        return [points, flLength];
+      const tryAddPoint = (pt, gridPoss, forward) => {
+        if (pt == null)
+          return [pt, gridPoss];
+        let funHere = this.fun(pt);
+        if (funHere == null || funHere.length() == 0)
+          return [null, gridPoss];
+        const change = this.rk4(pt);
+        if (!change)
+          return [null, gridPoss];
+        if (forward)
+          pt = pt.add(change);
+        else
+          pt = pt.subtract(change);
+        if (pt.x < 0 || pt.x >= this.width || pt.y < 0 || pt.y >= this.height)
+          return [null, gridPoss];
+        let level2 = this.densityFun ? Math.round((this.grid.nyArr.length - 1) * this.densityFun(pt)) : 0;
+        const currPoss = this.grid.getPoss(pt.x, pt.y);
+        if (gridPoss != null && currPoss[level2] != gridPoss[level2] && this.grid.isOccupied(pt.x, pt.y, level2))
+          return [null, gridPoss];
+        this.grid.fill(pt.x, pt.y);
+        gridPoss = currPoss;
+        if (forward) {
+          flLength += points[points.length - 1].subtract(pt).length();
+          points.push(pt);
+        } else {
+          flLength += points[0].subtract(pt).length();
+          points.unshift(pt);
+        }
+        return [pt, gridPoss];
+      };
+      let fwPt = startPt.clone();
+      let fwGridPoss = null;
+      let bkPt = startPt.clone();
+      let bkGridPoss = null;
+      while (this.maxLength <= 0 || flLength <= this.maxLength) {
+        if (fwPt != null)
+          [fwPt, fwGridPoss] = tryAddPoint(fwPt, fwGridPoss, true);
+        if (bkPt != null)
+          [bkPt, bkGridPoss] = tryAddPoint(bkPt, bkGridPoss, false);
+        if (fwPt == null && bkPt == null)
+          break;
+      }
+      return [points, flLength];
+    }
+    rk4(pt) {
+      const step = this.stepSize;
+      const k1 = this.fun(pt);
+      if (!k1)
+        return null;
+      const k2 = this.fun(pt.add(k1.multiply(step * 0.5)));
+      if (!k2)
+        return null;
+      const k3 = this.fun(pt.add(k2.multiply(step * 0.5)));
+      if (!k3)
+        return null;
+      const k4 = this.fun(pt.add(k3.multiply(step)));
+      if (!k4)
+        return null;
+      const res = k1.multiply(step / 6).add(k2.multiply(step / 3)).add(k3.multiply(step / 3)).add(k4.multiply(step / 6));
+      return res;
+    }
+  };
+  var OccupancyGrid = class {
+    constructor(width, height, minCellSz, maxCellSz, nSizes, logarithmic) {
+      this.width = width;
+      this.height = height;
+      this.nxArr = [];
+      this.nyArr = [];
+      this.cellWArr = [];
+      this.cellHArr = [];
+      const cellSizes = this.calcCellSizes(minCellSz, maxCellSz, nSizes, logarithmic);
+      for (let i = 0; i < nSizes; ++i) {
+        const cellSz = cellSizes[i];
+        const nx = Math.round(width / cellSz);
+        const ny = Math.round(height / cellSz);
+        this.nxArr.push(nx);
+        this.nyArr.push(ny);
+        this.cellWArr.push(width / nx);
+        this.cellHArr.push(height / ny);
+      }
+      this.data = new Uint32Array(this.nxArr[0] * this.nyArr[0]);
+    }
+    calcCellSizes(minCellSz, maxCellSz, nSizes, logarithmic) {
+      const sizes = [];
+      if (!logarithmic) {
+        const diff = (maxCellSz - minCellSz) / (nSizes - 1);
+        for (let i = 0; i < nSizes; ++i)
+          sizes.push(minCellSz + i * diff);
+      } else {
+        const logDiff = Math.log2(maxCellSz - minCellSz + 1) / (nSizes - 1);
+        for (let i = 0; i < nSizes; ++i)
+          sizes.push(minCellSz + Math.pow(2, i * logDiff) - 1);
+      }
+      return sizes;
+    }
+    getPoss(x, y) {
+      let res = [];
+      for (let i = 0; i < this.nxArr.length; ++i)
+        res.push(this.getPos(x, y, i));
+      return res;
+    }
+    getPos(x, y, level) {
+      const ix = Math.floor(x / this.cellWArr[level]);
+      const iy = Math.floor(y / this.cellHArr[level]);
+      return iy * this.nxArr[level] + ix;
+    }
+    isOccupied(x, y, level) {
+      const pos = this.getPos(x, y, level);
+      const val = this.data[pos];
+      const mask = 1 << level;
+      return (val & mask) != 0;
+    }
+    fill(x, y) {
+      for (let i = 0; i <= this.nxArr.length; ++i) {
+        const pos = this.getPos(x, y, i);
+        const mask = 1 << i;
+        this.data[pos] |= mask;
+      }
+    }
+  };
+
+  // current/10-hatch/app.js
   init(doShit, false);
   function doShit() {
-    const startTime = performance.now();
+    let startTime = performance.now();
     const canvasC2 = document.getElementById("c");
     const w = canvasC2.width;
     const h = canvasC2.height;
@@ -3999,40 +4215,66 @@ ${errors.filter((_) => _).join("\n")}`;
     drawBufferInfo(gl, bufferInfo);
     const data_gradients = new Float32Array(w * h * 4);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, data_gradients);
-    drawFieldGrid(15, (x, y, vec) => {
-      getVec4(data_gradients, w, x, y, vec);
-      const len = Math.sqrt(vec[0] ** 2 + vec[1] ** 2);
-      vec[0] *= 10 / len;
-      vec[1] *= 10 / len;
-    });
-    const endTime = performance.now();
-    const elapsed = endTime - startTime;
-    console.log(elapsed);
-  }
-  function drawFieldGrid(idealGridStep, getData) {
-    const canvas = document.getElementById("d");
-    const w = canvas.width;
-    const h = canvas.height;
-    const nx = Math.round((w - 1) / idealGridStep);
-    const xStep = (w - 1) / nx;
-    const ny = Math.round((h - 1) / idealGridStep);
-    const yStep = (h - 1) / ny;
-    const ctx = canvas.getContext("2d");
+    let endTime = performance.now();
+    let elapsed = endTime - startTime;
+    console.log("Shaders: " + elapsed + " msec");
+    startTime = performance.now();
     const vec = [0, 0, 0, 0];
-    ctx.strokeStyle = "white";
+    const flowFun = (pt) => {
+      let x = Math.floor(pt.x);
+      let y = Math.floor(pt.y);
+      getVec4(data_gradients, w, x, y, vec);
+      let res = new Vec2(vec[0], vec[1]);
+      if (res.length() < 5e-4)
+        return null;
+      res.normalize();
+      return res;
+    };
+    const densityFun = (pt) => {
+      let x = Math.floor(pt.x);
+      let y = Math.floor(pt.y);
+      getVec4(data_difflight, w, x, y, vec);
+      return vec[0];
+    };
+    const flopt = {
+      width: w,
+      height: h,
+      fun: flowFun,
+      stepSize: 1,
+      maxLength: 0,
+      densityFun,
+      minCellSize: 2,
+      maxCellSize: 64,
+      nShades: 16,
+      logGrid: true
+    };
+    const flowLines = [];
+    const flgen = new FlowLineGenerator(flopt);
+    while (true) {
+      const [flPoints, flLength] = flgen.genFlowLine();
+      if (!flPoints)
+        break;
+      if (flPoints.length < 2 || flLength < flopt.minCellSize)
+        continue;
+      flowLines.push(flPoints);
+    }
+    const canvas = document.getElementById("d");
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
-    for (let ix = 0; ix <= nx; ++ix) {
-      for (let iy = 0; iy <= ny - 1; ++iy) {
-        const x = Math.round(ix * xStep);
-        const y = Math.round(iy * yStep);
-        getData(x, y, vec);
-        const dx = Math.round(vec[0]);
-        const dy = Math.round(vec[1]);
-        ctx.moveTo(x, h - y - 1);
-        ctx.lineTo(x + dx, h - y - dy - 1);
+    for (const pts of flowLines) {
+      ctx.moveTo(pts[0].x, h - pts[0].y);
+      for (let i = 1; i < pts.length; ++i) {
+        ctx.lineTo(pts[i].x, h - pts[i].y);
       }
     }
     ctx.stroke();
+    endTime = performance.now();
+    elapsed = endTime - startTime;
+    console.log("Hatching: " + elapsed + " msec");
+    console.log("# flowlines: " + flowLines.length);
   }
   function getVec4(data, w, x, y, vec) {
     for (let i = 0; i < 4; ++i)
