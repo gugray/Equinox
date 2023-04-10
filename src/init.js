@@ -1,5 +1,5 @@
-const canvasC = document.getElementById("c");
-const canvasD = document.getElementById("d");
+const canvas3D = document.getElementById("canv3d");
+const canvas2D = document.getElementById("canv2d");
 const devicePixelRatio = window.devicePixelRatio || 1;
 let canvasWidth, canvasHeight, aspect;
 
@@ -7,12 +7,12 @@ function init(prog, fullScreen = true) {
 
   document.addEventListener('DOMContentLoaded', () => {
     if (fullScreen) {
-      initFullScreen(canvasC);
-      initFullScreen(canvasD);
+      initFullScreen(canvas3D);
+      initFullScreen(canvas2D);
     }
     else {
-      initFixed(canvasC);
-      initFixed(canvasD);
+      initFixed(canvas3D);
+      initFixed(canvas2D);
     }
     moveCanvasD();
     if (prog) prog();
@@ -20,10 +20,7 @@ function init(prog, fullScreen = true) {
 }
 
 function moveCanvasD() {
-  canvasD.style.position = "absolute";
-  canvasD.style.top = canvasC.clientTop + "px";
-  canvasD.style.left = canvasC.offsetLeft + "px";
-  // canvasD.style.backgroundColor = "magenta";
+  canvas2D.style.position = "absolute";
 }
 
 function initFixed(canvas) {
@@ -32,9 +29,7 @@ function initFixed(canvas) {
   aspect = elmWidth / elmHeight;
   canvas.style.width = elmWidth + "px";
   canvas.style.height = elmHeight + "px";
-  canvas.style.margin = "50px auto 0 auto";
   canvas.style.display = "block";
-  //canvas.style.border = "border: 1px solid hsl(67, 0%, 40%)";
 
   canvasWidth = elmWidth * devicePixelRatio;
   canvasHeight = elmHeight * devicePixelRatio;

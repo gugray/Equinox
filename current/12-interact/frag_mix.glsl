@@ -123,7 +123,7 @@ void main() {
     vec3 phongColor = phongIllumination(K_a, K_d, K_s, shininess, p, normal, eye);
 
     if (isPaneA)
-        outColor = vec4(phongColor, 0.);
+        outColor = vec4(phongColor, 1.);
     else
         outColor = vec4(dlum, dist, 0., 0.);
 }

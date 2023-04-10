@@ -7,4 +7,4 @@
 -- overlay 2d canvas to visualize 3d vector fields
 -- controls
 -- rando distro shading SDF surfaces: point dithering; lines
--- per-frame rener + moviefy w/ffmpeg
+-- per-frame render + moviefy w/ffmpeg

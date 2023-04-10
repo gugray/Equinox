@@ -35,7 +35,7 @@ exports = (options = {}) => {
       // Before build, clean up maps in target folder
       build.onStart(async () => {
         if (!options.prod) return;
-        try { fs.unlinkSync("public/bundle.js.map"); } catch {}
+        try { fs.unlinkSync("public/app.js.map"); } catch {}
       });
 
       // When build is done, infuse cache busting hashes in hashes.html,
@@ -57,8 +57,6 @@ exports = (options = {}) => {
         let hashesTogether = appJsHash + "\n" + appCssHash;
         if (hashesTogether.length != 65) throw "wrong combined hash length";
         await fs.promises.writeFile("public/hashes.html", hashesTogether);
-        // Rename app.js in target folder to bundle.js
-        await fs.promises.rename("public/app.js", "public/bundle.js");
       });
     }
   };
