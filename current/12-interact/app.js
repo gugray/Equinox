@@ -5,6 +5,7 @@ import {init} from "../../src/init.js";
 import * as dat from "../../src/dat.gui.module.js";
 import * as twgl from "twgl.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
+import {doZiggy} from "./app-zig.js";
 
 const gui = new dat.GUI();
 let canvas2D, ctx2D;
@@ -12,7 +13,16 @@ let webGLCanvas, gl, w, h, progInfo;
 let arrays, bufferInfo; // Used to drive simple vertex shader
 let attachments, framebuf, txdata; // Used when rendering to texture
 
+// Deniz: Optimization is the poison of creativity
+// Sei kein Lachs
+
+// Next up:
+// -- put camera params into uniforms
+// -- mouse control on canvas
+// -- GUI controls
+
 init(setup, false);
+doZiggy();
 
 const params = {
   hatch_scene: false,
@@ -101,29 +111,23 @@ function hatch() {
 
   let startTime = performance.now();
 
-  const vAbove = [0, 0, 0, 0];
-  const vBelow = [0, 0, 0, 0];
-  const vLeft = [0, 0, 0, 0];
-  const vRight = [0, 0, 0, 0];
+  const vec = [0, 0, 0, 0];
+
   const flowFun = (pt) => {
+
     let x = Math.floor(pt.x);
     let y = Math.floor(pt.y);
     if (x == 0 || x >= w - 1 || y == 0 || y >= h - 1)
       return null;
-    getVec4(txdata, w * 2, w + x, y - 1, vAbove);
-    getVec4(txdata, w * 2, w + x, y + 1, vBelow);
-    getVec4(txdata, w * 2, w + x - 1, y, vLeft);
-    getVec4(txdata, w * 2, w + x + 1, y, vRight);
-    if (vAbove[1] == 0 || vBelow[1] == 0 || vLeft[1] == 0 || vRight == [0])
-      return null;
-    // let res = new Vec2(vRight[0] - vLeft[0], vBelow[0] - vAbove[0]);
-    let res = new Vec2(vAbove[0] - vBelow[0], vRight[0] - vLeft[0]);
+
+    getVec4(txdata, w * 2, w + x, y, vec);
+    let res = new Vec2(vec[2], vec[3]);
+
     if (res.length() < 0.00001) return null;
     res.normalize();
     return res;
   }
 
-  const vec = [0, 0, 0, 0];
   const densityFun = (pt) => {
 
     let x = Math.floor(pt.x);

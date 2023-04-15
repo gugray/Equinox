@@ -89,41 +89,67 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 N
     return color;
 }
 
+struct PointInfo {
+    vec4 color; // Display color
+    float dlum; // Luminosity from diffuse illumination from eye
+    float dist; // Distance from eye
+    vec2 dlumGradient; // Diffuse luminosity gradient
+};
 
-void main() {
+PointInfo calcPoint(vec2 coord) {
 
-    bool isPaneA = gl_FragCoord.x < resolution.x;
-    vec2 coord = vec2(mod(gl_FragCoord.x, resolution.x), gl_FragCoord.y);
+    PointInfo res;
+    res.color = vec4(0.);
+    res.dist = 0.;
+    res.dlum = 0.;
+    res.dlumGradient = vec2(0.);
 
     vec3 viewDir = rayDirection(45.0, resolution.xy, coord.xy);
     vec3 eye = vec3(0., 0., 5.);
     mat4 viewToWorld = viewMatrix(eye, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
     vec3 worldDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;
 
-    float dist = march(eye, worldDir, MIN_DIST, MAX_DIST);
+    res.dist = march(eye, worldDir, MIN_DIST, MAX_DIST);
 
     // Didn't hit anything
-    if (dist > MAX_DIST - EPSILON) {
-        outColor = vec4(0.);
-        return;
+    if (res.dist > MAX_DIST - EPSILON) {
+        //outColor = vec4(0.);
+        return res;
     }
 
     // The closest point on the surface to the eyepoint along the view ray
-    vec3 p = eye + dist * worldDir;
+    vec3 p = eye + res.dist * worldDir;
     // Surface normal here
     vec3 normal = estimateNormal(p);
     // Diffuse illumination from eye
-    float dlum = diffuseIllumination(p, normal, eye);
+    res.dlum = diffuseIllumination(p, normal, eye);
 
     // Phong illumunation
     vec3 K_a = vec3(0.2); // Ambient color
     vec3 K_d = vec3(1.); // Diffuse color
     vec3 K_s = vec3(1.8); // Specular color
     float shininess = 5.;
-    vec3 phongColor = phongIllumination(K_a, K_d, K_s, shininess, p, normal, eye);
+    res.color = vec4(phongIllumination(K_a, K_d, K_s, shininess, p, normal, eye), 1.);
 
-    if (isPaneA)
-        outColor = vec4(phongColor, 1.);
-    else
-        outColor = vec4(dlum, dist, 0., 0.);
+    return res;
+}
+
+void main() {
+
+    bool isPaneA = gl_FragCoord.x < resolution.x;
+    vec2 coord = vec2(mod(gl_FragCoord.x, resolution.x), gl_FragCoord.y);
+
+    PointInfo info = calcPoint(coord);
+    PointInfo infoAbove = calcPoint(vec2(coord.x, min(resolution.y - 1., coord.y + 1.)));
+    PointInfo infoBelow = calcPoint(vec2(coord.x, max(0., coord.y - 1.)));
+    PointInfo infoLeft = calcPoint(vec2(max(0., coord.x - 1.), coord.y));
+    PointInfo infoRight = calcPoint(vec2(min(resolution.x - 1., coord.x + 1.), coord.y));
+
+    if (isPaneA) {
+        outColor = info.color;
+        //outColor = vec4(info.dlum, info.dlum, info.dlum, 1.);
+    }
+    else {
+        outColor = vec4(info.dlum, info.dist, infoRight.dlum - infoLeft.dlum, infoAbove.dlum - infoBelow.dlum);
+    }
 }

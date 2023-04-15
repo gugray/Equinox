@@ -1,6 +1,9 @@
 public/*.js
 public/*.map
 public/*.html
+public/*.wasm
+
+zig/out
 
 .DS_Store
 node_modules
