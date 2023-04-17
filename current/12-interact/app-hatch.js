@@ -9,6 +9,7 @@ class Vec2 {
     if (this.len != null) return this.len;
     this.len = Math.sqrt(this.x**2 + this.y **2);
     return this.len;
+    // return Math.sqrt(this.x**2 + this.y **2);
   }
 
   normalize() {
@@ -49,14 +50,14 @@ function shuffle(arr) {
 class FlowLineGenerator {
 
   constructor({
-                width, height, fun, stepSize, maxLength,
-                densityFun,
+                width, height, field, stepSize, maxLength,
+                density,
                 minCellSize, maxCellSize, nShades, logGrid
               }) {
     this.width = width;
     this.height = height;
-    this.fun = fun;
-    this.densityFun = densityFun;
+    this.field = field;
+    this.density = density;
     this.maxLength = maxLength;
     this.stepSize = stepSize;
     this.grid = new OccupancyGrid(width, height, minCellSize, maxCellSize, nShades, logGrid);
@@ -68,7 +69,7 @@ class FlowLineGenerator {
     this.nextIx = 0;
   }
 
-  getNextPt() {
+  getNextStartPt() {
     while (true) {
       if (this.nextIx == this.ixs.length)
         return null;
@@ -86,7 +87,7 @@ class FlowLineGenerator {
 
   genFlowLine() {
 
-    let startPt = this.getNextPt();
+    let startPt = this.getNextStartPt();
     if (startPt == null)
       return [null, 0];
 
@@ -94,9 +95,9 @@ class FlowLineGenerator {
 
     const points = [startPt];
     let flLength = 0;
-    if (this.fun(startPt) == null)
+    if (this.field(startPt) == null)
       return [points, flLength];
-    let level = this.densityFun ? Math.round((this.grid.nyArr.length - 1) * this.densityFun(startPt)) : 0;
+    let level = this.density ? Math.round((this.grid.nyArr.length - 1) * this.density(startPt)) : 0;
     if (this.grid.isOccupied(startPt.x, startPt.y, level))
       return [points, flLength];
 
@@ -111,7 +112,7 @@ class FlowLineGenerator {
 
     const tryAddPoint = (pt, gridPoss, forward) => {
       if (pt == null) return [pt, gridPoss];
-      let funHere = this.fun(pt);
+      let funHere = this.field(pt);
       if (funHere == null || funHere.length() == 0)
         return [null, gridPoss];
       const change = this.rk4(pt);
@@ -121,7 +122,7 @@ class FlowLineGenerator {
       else pt = pt.subtract(change);
       if (pt.x < 0 || pt.x >= this.width || pt.y < 0 || pt.y >= this.height)
         return [null, gridPoss];
-      let level = this.densityFun ? Math.round((this.grid.nyArr.length - 1) * this.densityFun(pt)) : 0;
+      let level = this.density ? Math.round((this.grid.nyArr.length - 1) * this.density(pt)) : 0;
       const currPoss = this.grid.getPoss(pt.x, pt.y);
       if (gridPoss != null && currPoss[level] != gridPoss[level] && this.grid.isOccupied(pt.x, pt.y, level))
         return [null, gridPoss];
@@ -160,13 +161,13 @@ class FlowLineGenerator {
 
   rk4(pt) {
     const step = this.stepSize;
-    const k1 = this.fun(pt);
+    const k1 = this.field(pt);
     if (!k1) return null;
-    const k2 = this.fun(pt.add(k1.multiply(step * 0.5)));
+    const k2 = this.field(pt.add(k1.multiply(step * 0.5)));
     if (!k2) return null;
-    const k3 = this.fun(pt.add(k2.multiply(step * 0.5)));
+    const k3 = this.field(pt.add(k2.multiply(step * 0.5)));
     if (!k3) return null;
-    const k4 = this.fun(pt.add(k3.multiply(step)));
+    const k4 = this.field(pt.add(k3.multiply(step)));
     if (!k4) return null;
     const res = k1.multiply(step / 6).add(k2.multiply(step / 3)).add(k3.multiply(step / 3)).add(k4.multiply(step / 6));
     return res;
@@ -241,7 +242,7 @@ class OccupancyGrid {
   }
 
   fill(x, y) {
-    for (let i = 0; i <= this.nxArr.length; ++i) {
+    for (let i = 0; i < this.nxArr.length; ++i) {
       const pos = this.getPos(x, y, i);
       const mask = 1 << i;
       this.data[pos] |= mask;

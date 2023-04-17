@@ -5,13 +5,13 @@ import {init} from "../../src/init.js";
 import * as dat from "../../src/dat.gui.module.js";
 import * as twgl from "twgl.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
-import {doZiggy} from "./app-zig.js";
 
 const gui = new dat.GUI();
 let canvas2D, ctx2D;
 let webGLCanvas, gl, w, h, progInfo;
 let arrays, bufferInfo; // Used to drive simple vertex shader
 let attachments, framebuf, txdata; // Used when rendering to texture
+let instance;
 
 // Deniz: Optimization is the poison of creativity
 // Sei kein Lachs
@@ -22,7 +22,7 @@ let attachments, framebuf, txdata; // Used when rendering to texture
 // -- GUI controls
 
 init(setup, false);
-doZiggy();
+initZigModule();
 
 const params = {
   hatch_scene: false,
@@ -102,10 +102,32 @@ function render() {
   else {
     // Fetch results, and hatch
     gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, txdata);
+
     hatch();
+    zigHatch();
   }
 }
 
+function zigHatch() {
+
+  const pageBytes = 65536;
+  const flg = instance.exports;
+
+  const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 1, 0);
+  console.log("initFlowlineGenerator: " + initRes);
+  if (initRes != 1) return;
+
+  const dataAddr = flg.getDataAddr();
+  const trgAddr = flg.getTrgAddr();
+  const zigData = new Float32Array(flg.memory.buffer, dataAddr, w * h * 2 * 4);
+  for (let i = 0; i < zigData.length; ++i)
+    zigData[i] = txdata[i];
+  const zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
+
+  const genRes = flg.genFlowlines(zigData, zigData.length, zigTrg, zigTrg.length);
+  console.log("genFlowlines: " + genRes);
+
+}
 
 function hatch() {
 
@@ -148,8 +170,8 @@ function hatch() {
   }
 
   const flopt = {
-    width: w, height: h, fun: flowFun, stepSize: 1, maxLength: 0,
-    densityFun: densityFun,
+    width: w, height: h, field: flowFun, stepSize: 1, maxLength: 0,
+    density: densityFun,
     minCellSize: 3, maxCellSize: 24, nShades: 12, logGrid: true
   }
   const flowLines = [];
@@ -194,4 +216,32 @@ function setPixel(imgd, x, y, r, g, b) {
   imgd.data[(y * w + x) * 4 + 1] = Math.round(g);
   imgd.data[(y * w + x) * 4 + 2] = Math.round(b);
   imgd.data[(y * w + x) * 4 + 3] = 255;
+}
+
+function initZigModule() {
+
+  const req = new XMLHttpRequest();
+  req.open('GET', 'flg.wasm');
+  req.responseType = 'arraybuffer';
+  req.send();
+
+  req.onload = function () {
+    const bytes = req.response;
+    WebAssembly.instantiate(bytes, {
+      env: {}
+    }).then(result => {
+      instance = result.instance;
+      // const res = zig.initFlowlineGenerator(740, 525, 3, 24, 12, true);
+      // console.log(res);
+      // const memory = result.instance.exports.memory;
+      // const array = new Int32Array(memory.buffer, 0, 5);
+      // array.set([3, 15, 18, 4, 2])
+      // const add = result.instance.exports.add;
+      // console.log(add(3, 5));
+      // const sum = result.instance.exports.sum;
+      // console.log(sum(array.byteOffset, array.length));
+      // console.log(array[0]);
+    });
+  };
+
 }

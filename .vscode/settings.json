@@ -1,0 +1,7 @@
+{
+  "editor.formatOnSave": true,
+  "lldb.verboseLogging": true,
+  "lldb.adapterEnv": {
+    "LLDB_CAPTURE_REPRODUCER": "1"
+  }
+}

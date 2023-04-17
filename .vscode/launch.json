@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug",
+      "program": "${workspaceFolder}/zig/out/flg-test",
+      "args": [
+        "zig/src/fgl.zig"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopOnEntry": true
+    },
+    {
+      "name": "CPPDBG",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/zig/out/flg-test",
+      "args": [
+        "zig/src/fgl.zig"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/zig/out",
+      "sourceFileMap": {
+        "../src/": "~/DevC/Equinox/zig/src"
+      },
+      "environment": [],
+      "MIMode": "lldb",
+    },
+  ]
+}

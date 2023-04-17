@@ -4,6 +4,7 @@ fi
 
 mkdir ./zig/out
 cd ./zig/out
-zig build-lib ../src/flg.zig -target wasm32-freestanding -dynamic
+zig build-lib ../src/flg.zig -target wasm32-freestanding -dynamic -O ReleaseSafe
 cp flg.wasm ../../public
-zig test ../src/flg.zig
+zig test -femit-bin=./flg-test ../src/flg.zig -O Debug
+#zig test ../src/flg.zig
