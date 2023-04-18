@@ -4,8 +4,10 @@ public/*.html
 public/*.wasm
 
 zig/out
+zig/data.txt
 
 .DS_Store
 node_modules
 .idea
 yarn-error.log
+

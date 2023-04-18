@@ -72,6 +72,12 @@ pub const OccupancyGrid = struct {
         self.alloc.destroy(self);
     }
 
+    pub fn reset(self: *OccupancyGrid) void {
+        for (self.data) |_, ix| {
+            self.data[ix] = 0;
+        }
+    }
+
     pub fn cellCount(self: *OccupancyGrid) u32 {
         return self.layers[0].nx * self.layers[0].ny;
     }

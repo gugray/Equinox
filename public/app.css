@@ -7,8 +7,10 @@ body { }
 canvas { display: none; position: fixed; top: 32px; left: 32px; }
 canvas#c { background-color: black; }
 canvas#d { background-color: transparent; }
-p.note {
-  position: fixed; top: 10px; left: 10px; z-index: 1; padding: 10px; margin: 0;
-  font-family: sans-serif; color: #ccc;
-  background-color: #000748aa;
+footer {
+  position: fixed; bottom: 0; width: 100%; z-index: 1; padding: 10px; margin: 0;
+  font-family: sans-serif; color: #ccc; background-color: #202020;
+}
+footer a#dldata {
+  display: block; float: right; color: hsl(240, 57%, 62%); text-decoration: none;
 }

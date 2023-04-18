@@ -91,6 +91,12 @@ pub const FlowlineGenerator = struct {
         self.alloc.destroy(self);
     }
 
+    pub fn reset(self: *FlowlineGenerator) void {
+        utils.shuffle(self.ixs);
+        self.nextIx = 0;
+        self.grid.reset();
+    }
+
     pub fn genFlowline(self: *FlowlineGenerator, field: *const fieldFun, density: *const densityFun) !Flowline {
         self.fwPoints.clearRetainingCapacity();
         self.bkPoints.clearRetainingCapacity();

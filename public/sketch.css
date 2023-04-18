@@ -7,8 +7,8 @@ body { overflow-y: scroll; }
 canvas { display: block; }
 canvas#c { background-color: black; }
 canvas#d { background-color: transparent; }
-p.note {
-  position: fixed; top: 10px; left: 10px; z-index: 1; padding: 10px; margin: 0;
+footer {
+  position: fixed; bottom: 0; width: 100%; z-index: 1; padding: 10px; margin: 0;
   font-family: sans-serif; color: #ccc;
   background-color: #000748aa;
 }

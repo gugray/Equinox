@@ -26,7 +26,7 @@ initZigModule();
 
 const params = {
   hatch_scene: false,
-  real_light: true,
+  real_light: false,
 }
 
 
@@ -103,14 +103,34 @@ function render() {
     // Fetch results, and hatch
     gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, txdata);
 
-    hatch();
+    // prepareDataDownload();
+    // hatch();
     zigHatch();
   }
 }
 
+function prepareDataDownload() {
+  let dataStr = txdata.length.toString();
+  for (let i = 0; i < txdata.length; ++i) {
+    if ((i % 4) == 0) dataStr += "\n";
+    else dataStr += " ";
+    dataStr += txdata[i].toString();
+  }
+  dataStr += "\n";
+  let file;
+  let data = [];
+  data.push(dataStr);
+  let properties = { type: 'text/plain' };
+  try { file = new File(data, "data.txt", properties); }
+  catch { file = new Blob(data, properties); }
+  let url = URL.createObjectURL(file);
+  const elmDownload = document.getElementById("dldata");
+  elmDownload.href = url;
+  elmDownload.download = "data.txt";
+}
+
 function zigHatch() {
 
-  const pageBytes = 65536;
   const flg = instance.exports;
 
   const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 1, 0);
@@ -122,16 +142,47 @@ function zigHatch() {
   const zigData = new Float32Array(flg.memory.buffer, dataAddr, w * h * 2 * 4);
   for (let i = 0; i < zigData.length; ++i)
     zigData[i] = txdata[i];
-  const zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
+  let zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
 
-  const genRes = flg.genFlowlines(zigData, zigData.length, zigTrg, zigTrg.length);
-  console.log("genFlowlines: " + genRes);
+  let startTime = performance.now();
+  flg.seedPRNG(BigInt(Math.floor(Math.random() * Math.pow(2, 32))));
+  flg.reset();
+  const nGenerated = flg.genFlowlines(zigData, zigData.length, zigTrg, zigTrg.length);
+  let endTime = performance.now();
+  zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
+  console.log("genFlowlines: " + nGenerated);
+  let elapsed = endTime - startTime;
+  console.log("Elapsed: " + elapsed + " msec");
+
+  ctx2D.fillStyle = "white";
+  ctx2D.fillRect(0, 0, w, h);
+  ctx2D.fill();
+  ctx2D.strokeStyle = "black";
+  ctx2D.lineWidth = 2;
+  ctx2D.beginPath();
+  let trgIx = 0;
+  let lnCount = 0;
+  let newPath = true;
+  while (lnCount < nGenerated && trgIx < zigTrg.length) {
+    const x = zigTrg[trgIx++];
+    const y = zigTrg[trgIx++];
+    if (x == 0xffffffff) {
+      newPath = true;
+      ++lnCount;
+      continue;
+    }
+    if (newPath) {
+      ctx2D.moveTo(x, h - y);
+      newPath = false;
+    }
+    else ctx2D.lineTo(x, h - y);
+  }
+  ctx2D.stroke();
 
 }
 
 function hatch() {
 
-  let startTime = performance.now();
 
   const vec = [0, 0, 0, 0];
 
@@ -169,6 +220,7 @@ function hatch() {
     return vec[0];
   }
 
+  let startTime = performance.now();
   const flopt = {
     width: w, height: h, field: flowFun, stepSize: 1, maxLength: 0,
     density: densityFun,
@@ -182,6 +234,7 @@ function hatch() {
     if (flPoints.length < 2 || flLength < flopt.minCellSize) continue;
     flowLines.push(flPoints);
   }
+  let endTime = performance.now();
 
   ctx2D.fillStyle = "white";
   ctx2D.fillRect(0, 0, w, h);
@@ -197,7 +250,6 @@ function hatch() {
   }
   ctx2D.stroke();
 
-  let endTime = performance.now();
   let elapsed = endTime - startTime;
   console.log("Hatching: " + elapsed + " msec");
   console.log("# flowlines: " + flowLines.length);
@@ -231,16 +283,6 @@ function initZigModule() {
       env: {}
     }).then(result => {
       instance = result.instance;
-      // const res = zig.initFlowlineGenerator(740, 525, 3, 24, 12, true);
-      // console.log(res);
-      // const memory = result.instance.exports.memory;
-      // const array = new Int32Array(memory.buffer, 0, 5);
-      // array.set([3, 15, 18, 4, 2])
-      // const add = result.instance.exports.add;
-      // console.log(add(3, 5));
-      // const sum = result.instance.exports.sum;
-      // console.log(sum(array.byteOffset, array.length));
-      // console.log(array[0]);
     });
   };
 

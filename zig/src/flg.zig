@@ -72,6 +72,10 @@ test "Execute initFlowlineGenerator" {
     try expect(res == 1);
 }
 
+export fn reset() void {
+    g_flgen.reset();
+}
+
 export fn getDataAddr() [*]f32 {
     return g_data.ptr;
 }
@@ -94,13 +98,18 @@ fn density(pt: Vec2) f32 {
 
 fn field(pt: Vec2) Vec2 {
     const w = g_flgen.params.width;
-    const x = @floatToInt(u32, math.floor(pt.x));
-    const y = @floatToInt(u32, math.floor(pt.y));
+    const h = g_flgen.params.height;
+    const x = @floatToInt(i32, math.floor(pt.x));
+    const y = @floatToInt(i32, math.floor(pt.y));
+    if (x < 1 or x >= w - 1 or y < 1 or y >= h - 1)
+        return Vec2.nan();
     var res: Vec2 = .{
-        .x = g_data[(y * w * 2 + w + x) * 4 + 2],
-        .y = g_data[(y * w * 2 + w + x) * 4 + 3],
+        .x = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 2],
+        .y = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 3],
     };
-    res.normalize();
+    const len = res.len();
+    if (len < 0.00001) return Vec2.nan();
+    res = res.mul(1 / len);
     return res;
 }
 
@@ -131,13 +140,14 @@ fn saveFlowline(fwPoints: []Vec2, bkPoints: []Vec2) void {
 export fn genFlowlines() i32 {
     var nLines: i32 = 0;
     g_trg_pos = 0;
+    g_flgen.reset();
     while (true) {
         if (g_flgen.genFlowline(field, density)) |fl| {
             if (fl.fwPoints.len == 0) break;
             if (fl.fwPoints.len + fl.bkPoints.len < 3) continue;
+            if (fl.length < g_flgen.params.minCellSize) continue;
             saveFlowline(fl.fwPoints, fl.bkPoints);
             nLines += 1;
-            if (nLines > 60) break;
         } else |_| {
             return -1;
         }
@@ -145,8 +155,9 @@ export fn genFlowlines() i32 {
     return nLines;
 }
 
-export fn seedPRNG(seed: u64) void {
-    utils.seedPRNG(seed);
+export fn seedPRNG(seed: i64) void {
+    const pseed = if (seed < 0) -seed else seed;
+    utils.seedPRNG(@intCast(u64, pseed));
 }
 
 pub fn log(
@@ -159,4 +170,59 @@ pub fn log(
     _ = scope;
     _ = format;
     _ = args;
+}
+
+fn doLargeDataTest() !void {
+    var file = try std.fs.cwd().openFile("../data.txt", .{});
+    defer file.close();
+
+    var buf_reader = std.io.bufferedReader(file.reader());
+    var in_stream = buf_reader.reader();
+    var buf: [1024]u8 = undefined;
+
+    var itemCountStr = try in_stream.readUntilDelimiterOrEof(&buf, '\n');
+    var itemCount = try std.fmt.parseUnsigned(u32, itemCountStr.?, 10);
+
+    g_data = try gpall.alloc(f32, itemCount);
+    g_trg = try gpall.alloc(u32, 10_000_000);
+
+    var arrIx: u32 = 0;
+    while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var p0 = std.mem.indexOfPos(u8, line, 0, " ").?;
+        var p1 = std.mem.indexOfPos(u8, line, p0 + 1, " ").?;
+        var p2 = std.mem.indexOfPos(u8, line, p1 + 1, " ").?;
+        var str0 = line[0..p0];
+        var str1 = line[p0 + 1 .. p1];
+        var str2 = line[p1 + 1 .. p2];
+        var str3 = line[p2 + 1 ..];
+        g_data[arrIx] = try std.fmt.parseFloat(f32, str0);
+        arrIx += 1;
+        g_data[arrIx] = try std.fmt.parseFloat(f32, str1);
+        arrIx += 1;
+        g_data[arrIx] = try std.fmt.parseFloat(f32, str2);
+        arrIx += 1;
+        g_data[arrIx] = try std.fmt.parseFloat(f32, str3);
+        arrIx += 1;
+    }
+    try expect(arrIx == itemCount);
+
+    g_flgen = try flg.FlowlineGenerator.create(gpall, .{
+        .width = 1480,
+        .height = 1050,
+        .stepSize = 1,
+        .maxLength = 0,
+        .minCellSize = 3,
+        .maxCellSize = 24,
+        .nShades = 12,
+        .logGrid = true,
+    });
+
+    const msStart = std.time.milliTimestamp();
+    var nLines = genFlowlines();
+    const msElapsed = std.time.milliTimestamp() - msStart;
+    std.debug.print("\n\n# flowlines: {d} in {d} msec\n\n", .{ nLines, msElapsed });
+}
+
+test "test with large data" {
+    // try doLargeDataTest();
 }
