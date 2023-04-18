@@ -9,7 +9,7 @@ canvas#c { background-color: black; }
 canvas#d { background-color: transparent; }
 footer {
   position: fixed; bottom: 0; width: 100%; z-index: 1; padding: 10px; margin: 0;
-  font-family: sans-serif; color: #ccc; background-color: #202020;
+  font-family: sans-serif; color: #ccc; background-color: #20202080;
 }
 footer a#dldata {
   display: block; float: right; color: hsl(240, 57%, 62%); text-decoration: none;

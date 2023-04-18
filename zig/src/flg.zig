@@ -103,6 +103,9 @@ fn field(pt: Vec2) Vec2 {
     const y = @floatToInt(i32, math.floor(pt.y));
     if (x < 1 or x >= w - 1 or y < 1 or y >= h - 1)
         return Vec2.nan();
+    var dist = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 1];
+    if (dist == 0)
+        return Vec2.nan();
     var res: Vec2 = .{
         .x = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 2],
         .y = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 3],

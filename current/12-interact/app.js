@@ -4,6 +4,8 @@ import fs from "./frag_mix.glsl";
 import {init} from "../../src/init.js";
 import * as dat from "../../src/dat.gui.module.js";
 import * as twgl from "twgl.js";
+import {SimplexNoise} from "../../src/simplex-noise.js";
+import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
 
 const gui = new dat.GUI();
@@ -21,6 +23,7 @@ let instance;
 // -- mouse control on canvas
 // -- GUI controls
 
+setRandomGenerator(mulberry32(42));
 init(setup, false);
 initZigModule();
 
@@ -104,8 +107,36 @@ function render() {
     gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, txdata);
 
     // prepareDataDownload();
-    // hatch();
-    zigHatch();
+    genNoiseData(true);
+    hatch();
+    // zigHatch();
+  }
+}
+
+function genNoiseData(rot) {
+  const simplex = new SimplexNoise(8956);
+  const mul = 0.001;
+  const freq = 2;
+  const gain = 0.001;
+  for (let x = 0; x < w; ++x) {
+    for (let y = 0; y < h; ++y) {
+      // Diffuse light brightness
+      // txdata[(y * 2 * w + w + x) * 4 + 0] = 0.5;
+      // Distance ~ not used, any value
+      // txdata[(y * 2 * w + w + x) * 4 + 1] = 42;
+      // Field vector
+      const angle = freq * 2 * Math.PI * simplex.noise2D(x * mul, y * mul);
+      let valx = txdata[(y * 2 * w + w + x) * 4 + 2];
+      let valy = txdata[(y * 2 * w + w + x) * 4 + 3];
+      if (rot) [valx, valy] = [-valy, valx];
+      const noisex = gain * Math.cos(angle);
+      const noisey = gain * Math.sin(angle);
+      let vx = valx + noisex;
+      let vy = valy + noisey;
+      const len = Math.sqrt(vx ** 2 + vy ** 2);
+      txdata[(y * 2 * w + w + x) * 4 + 2] = vx / len;
+      txdata[(y * 2 * w + w + x) * 4 + 3] = vy / len;
+    }
   }
 }
 
@@ -133,7 +164,7 @@ function zigHatch() {
 
   const flg = instance.exports;
 
-  const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 1, 0);
+  const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 4, 0);
   console.log("initFlowlineGenerator: " + initRes);
   if (initRes != 1) return;
 
@@ -145,7 +176,7 @@ function zigHatch() {
   let zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
 
   let startTime = performance.now();
-  flg.seedPRNG(BigInt(Math.floor(Math.random() * Math.pow(2, 32))));
+  flg.seedPRNG(BigInt(Math.floor(rand() * Math.pow(2, 32))));
   flg.reset();
   const nGenerated = flg.genFlowlines(zigData, zigData.length, zigTrg, zigTrg.length);
   let endTime = performance.now();
@@ -190,10 +221,13 @@ function hatch() {
 
     let x = Math.floor(pt.x);
     let y = Math.floor(pt.y);
-    if (x == 0 || x >= w - 1 || y == 0 || y >= h - 1)
+    if (x <= 0 || x >= w - 1 || y <= 0 || y >= h - 1)
       return null;
 
     getVec4(txdata, w * 2, w + x, y, vec);
+    // distance = 0 means no object
+    if (vec[1] == 0)
+      return null;
     let res = new Vec2(vec[2], vec[3]);
 
     if (res.length() < 0.00001) return null;
@@ -222,7 +256,7 @@ function hatch() {
 
   let startTime = performance.now();
   const flopt = {
-    width: w, height: h, field: flowFun, stepSize: 1, maxLength: 0,
+    width: w, height: h, field: flowFun, stepSize: 4, maxLength: 0,
     density: densityFun,
     minCellSize: 3, maxCellSize: 24, nShades: 12, logGrid: true
   }

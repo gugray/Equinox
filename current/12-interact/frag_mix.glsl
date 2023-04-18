@@ -114,6 +114,7 @@ PointInfo calcPoint(vec2 coord) {
     // Didn't hit anything
     if (res.dist > MAX_DIST - EPSILON) {
         //outColor = vec4(0.);
+        res.dist = 0.;
         return res;
     }
 
@@ -139,11 +140,12 @@ void main() {
     bool isPaneA = gl_FragCoord.x < resolution.x;
     vec2 coord = vec2(mod(gl_FragCoord.x, resolution.x), gl_FragCoord.y);
 
+    float e = 3.;
     PointInfo info = calcPoint(coord);
-    PointInfo infoAbove = calcPoint(vec2(coord.x, min(resolution.y - 1., coord.y + 1.)));
-    PointInfo infoBelow = calcPoint(vec2(coord.x, max(0., coord.y - 1.)));
-    PointInfo infoLeft = calcPoint(vec2(max(0., coord.x - 1.), coord.y));
-    PointInfo infoRight = calcPoint(vec2(min(resolution.x - 1., coord.x + 1.), coord.y));
+    PointInfo infoAbove = calcPoint(vec2(coord.x, min(resolution.y - 1., coord.y + e)));
+    PointInfo infoBelow = calcPoint(vec2(coord.x, max(0., coord.y -e)));
+    PointInfo infoLeft = calcPoint(vec2(max(0., coord.x - e), coord.y));
+    PointInfo infoRight = calcPoint(vec2(min(resolution.x - 1., coord.x + e), coord.y));
 
     if (isPaneA) {
         outColor = info.color;

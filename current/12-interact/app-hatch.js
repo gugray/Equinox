@@ -1,3 +1,7 @@
+import {rand} from "../../src/random.js";
+
+const nVortexPts = 3;
+
 class Vec2 {
   constructor(x, y) {
     this.x = x;
@@ -17,6 +21,7 @@ class Vec2 {
     if (len == 0) return;
     this.x /= len;
     this.y /= len;
+    this.len = 1;
   }
 
   multiply(val) {
@@ -39,7 +44,7 @@ class Vec2 {
 function shuffle(arr) {
   let currIx = arr.length;
   while (currIx != 0) {
-    let randIx = Math.floor(Math.random() * currIx);
+    let randIx = Math.floor(rand() * currIx);
     currIx--;
     [arr[currIx], arr[randIx]] = [arr[randIx], arr[currIx]];
   }
@@ -78,8 +83,8 @@ class FlowLineGenerator {
       const nx = ix % this.grid.nxArr[0];
       ++this.nextIx;
       const res = new Vec2(
-        Math.floor((nx + Math.random()) * this.grid.cellWArr[0]),
-        Math.floor((ny + Math.random()) * this.grid.cellHArr[0]));
+        Math.floor((nx + rand()) * this.grid.cellWArr[0]),
+        Math.floor((ny + rand()) * this.grid.cellHArr[0]));
       if (!this.grid.isOccupied(res.x, res.y, 0))
         return res;
     }
@@ -101,11 +106,15 @@ class FlowLineGenerator {
     if (this.grid.isOccupied(startPt.x, startPt.y, level))
       return [points, flLength];
 
+    // if (startPt.x > 100 || startPt.y > 100)
+    //   return [points, 0];
+
+
     const isVortex = (forward) => {
-      if (points.length < 3) return false;
+      if (points.length < nVortexPts) return false;
       let [pt1, pt2] = forward
-        ? [points[points.length - 3], points[points.length - 1]]
-        : [points[0], points[2]];
+        ? [points[points.length - nVortexPts], points[points.length - 1]]
+        : [points[0], points[nVortexPts - 1]];
       let diff = pt1.subtract(pt2);
       return diff.length() < this.stepSize;
     }
@@ -147,13 +156,25 @@ class FlowLineGenerator {
     let iter = 0;
     while (this.maxLength <= 0 || flLength <= this.maxLength) {
       if (fwPt != null) [fwPt, fwGridPoss] = tryAddPoint(fwPt, fwGridPoss, true);
-      if (fwPt != null && isVortex(true)) fwPt = null;
+      // if (fwPt != null && (isNaN(fwPt.x) || isNaN(fwPt.y))) {
+      //   fwPt = null;
+      //   points.pop();
+      // }
+      if (fwPt != null && isVortex(true)) {
+        fwPt = null;
+      }
       if (bkPt != null) [bkPt, bkGridPoss] = tryAddPoint(bkPt, bkGridPoss, false);
-      if (bkPt != null && isVortex(false)) bkPt = null;
-      if (fwPt == null && bkPt == null) break;
+      // if (bkPt != null && (isNaN(bkPt.x) || isNaN(bkPt.y))) {
+      //   bkPt = null;
+      //   points.shift();
+      // }
+      if (bkPt != null && isVortex(false))
+        bkPt = null;
+      if (fwPt == null && bkPt == null)
+        break;
       ++iter;
-      // if (iter >= 10000)
-      //   alert("boo");
+      if (iter >= 10000)
+        alert("boo");
     }
 
     return [points, flLength];
