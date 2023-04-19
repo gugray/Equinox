@@ -72,8 +72,8 @@ test "Execute initFlowlineGenerator" {
     try expect(res == 1);
 }
 
-export fn reset() void {
-    g_flgen.reset();
+export fn reset(reShuffle: bool) void {
+    g_flgen.reset(reShuffle);
 }
 
 export fn getDataAddr() [*]f32 {
@@ -140,10 +140,10 @@ fn saveFlowline(fwPoints: []Vec2, bkPoints: []Vec2) void {
     g_trg_pos += 1;
 }
 
-export fn genFlowlines() i32 {
+export fn genFlowlines(reShuffle: bool) i32 {
     var nLines: i32 = 0;
     g_trg_pos = 0;
-    g_flgen.reset();
+    g_flgen.reset(reShuffle);
     while (true) {
         if (g_flgen.genFlowline(field, density)) |fl| {
             if (fl.fwPoints.len == 0) break;
@@ -221,7 +221,7 @@ fn doLargeDataTest() !void {
     });
 
     const msStart = std.time.milliTimestamp();
-    var nLines = genFlowlines();
+    var nLines = genFlowlines(true);
     const msElapsed = std.time.milliTimestamp() - msStart;
     std.debug.print("\n\n# flowlines: {d} in {d} msec\n\n", .{ nLines, msElapsed });
 }

@@ -3,7 +3,6 @@ build();
 async function build() {
 
   const esbuild = require("esbuild");
-  const { default: glslify } = await import("esbuild-plugin-glslify");
   const livereload = require("livereload");
   const customTasks = require("./build-custom-tasks");
   const myGlsl = require("./build-my-glsl.js");

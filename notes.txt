@@ -1,10 +1,25 @@
+Coming up:
+================================================
+OK multi-step pipeline: position; then luminance
+OK with multi-step pipeline: hatching approaches (in cpu first)
+OK overlay 2d canvas to visualize 3d vector fields
+OK controls
+-- Unify JS and Zig hatcher params, incl. short line filter
+-- Put camera params into uniforms
+-- Mouse control on canvas
+-- Extract texture straight to WASM buffer
+-- Toggle hatcher: JS or Zig
+-- Animate
+
+Research / longer term:
+================================================
 -- read up on: principal curvature
 -- SDFs and refraction
 -- render aist dancers with sdfs
--- multi-step pipeline: position; then luminance
 -- play more with shape composition and distortion
--- with multi-step pipeline: hatching approaches (in cpu first)
--- overlay 2d canvas to visualize 3d vector fields
--- controls
 -- rando distro shading SDF surfaces: point dithering; lines
 -- per-frame render + moviefy w/ffmpeg
+
+// Deniz: Optimization is the poison of creativity
+// Sei kein Lachs
+

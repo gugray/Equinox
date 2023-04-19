@@ -2,41 +2,73 @@ import vs from "./vert.glsl";
 import fs from "./frag_mix.glsl";
 
 import {init} from "../../src/init.js";
-import * as dat from "../../src/dat.gui.module.js";
+import GUI from 'lil-gui';
 import * as twgl from "twgl.js";
 import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
 
-const gui = new dat.GUI();
+const wasmUrl = "flg.wasm";
+
+let gui;
 let canvas2D, ctx2D;
 let webGLCanvas, gl, w, h, progInfo;
 let arrays, bufferInfo; // Used to drive simple vertex shader
-let attachments, framebuf, txdata; // Used when rendering to texture
-let instance;
-
-// Deniz: Optimization is the poison of creativity
-// Sei kein Lachs
-
-// Next up:
-// -- put camera params into uniforms
-// -- mouse control on canvas
-// -- GUI controls
+let attachments, framebuf; // Used when rendering to texture
+let instance1;
+let wasmDataAddr, wasmTrgAddr, wasmData, wasmTrg;
 
 setRandomGenerator(mulberry32(42));
 init(setup, false);
-initZigModule();
 
 const params = {
-  hatch_scene: false,
   real_light: false,
-}
-
+  animate: false,
+  hatch_scene: false,
+  add_noise: true,
+  use_wasm_hatcher: true,
+  log_perf: false,
+};
 
 function setupControls() {
-  gui.remember(params);
-  gui.add(params, "hatch_scene").onFinishChange(render);
-  gui.add(params, "real_light").onFinishChange(render);
+
+  const handler = {
+    save: () => {
+      const json = JSON.stringify(gui.save());
+      localStorage.setItem("params", json);
+    },
+    load: () => {
+      const json = localStorage.getItem("params");
+      if (!json) return;
+      gui.load(JSON.parse(json));
+    },
+    prepare_download: () => {
+      prepareDataDownload();
+    },
+  };
+
+  gui = new GUI();
+  const fRender = gui.addFolder("Render");
+  fRender.add(params, "real_light").onFinishChange(onChanged);
+  fRender.add(params, "animate").onFinishChange((newVal) => {
+    // Hasn't been animating yet, so must start now
+    if (newVal == true) requestAnimationFrame(render);
+  });
+  const fHatching = gui.addFolder("Hatching");
+  fHatching.add(params, "hatch_scene").onFinishChange(onChanged);
+  fHatching.add(params, "add_noise").onFinishChange(onChanged);
+  fHatching.add(params, "use_wasm_hatcher").onFinishChange(onChanged);
+  const fMisc = gui.addFolder("Misc");
+  fMisc.add(params, "log_perf").onFinishChange(onChanged);
+  fMisc.add(handler, "save");
+  fMisc.add(handler, "load");
+  fMisc.add(handler, "prepare_download");
+
+  function onChanged() {
+    if (params.animate) return;
+    requestAnimationFrame(render);
+  }
+
 }
 
 
@@ -62,21 +94,22 @@ function setup() {
   bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
   attachments = [{internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT}];
   framebuf = twgl.createFramebufferInfo(gl, attachments, w * 2, h);
-  txdata = new Float32Array(w * 2 * h * 4);
 
   progInfo = twgl.createProgramInfo(gl, [vs, fs]);
   gl.useProgram(progInfo.program);
 
-  render();
+  initZigModule(w, h, () => {
+    requestAnimationFrame(render);
+  });
 }
 
 
-function render() {
+function render(time) {
 
   let startTime = performance.now();
 
   const uniforms = {
-    time: 8,
+    time: params.animate ? time : 0,
     resolution: [w, h],
   };
 
@@ -96,24 +129,24 @@ function render() {
 
   let endTime = performance.now();
   let elapsed = endTime - startTime;
-  console.log("Shaders: " + elapsed + " msec");
+  if (params.log_perf)
+    console.log("Shaders: " + elapsed + " msec");
 
   if (!params.hatch_scene) {
     // Clear 2D canvas so it doesn't occlude our render
     ctx2D.clearRect(0, 0, w, h);
-  }
-  else {
+  } else {
     // Fetch results, and hatch
-    gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, txdata);
+    gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, wasmData);
 
-    // prepareDataDownload();
-    genNoiseData(true);
-    hatch();
-    // zigHatch();
+    if (params.add_noise) addNoise(true);
+    if (params.use_wasm_hatcher) zigHatch();
+    else hatch();
   }
+  if (params.animate) requestAnimationFrame(render);
 }
 
-function genNoiseData(rot) {
+function addNoise(rot) {
   const simplex = new SimplexNoise(8956);
   const mul = 0.001;
   const freq = 2;
@@ -121,39 +154,42 @@ function genNoiseData(rot) {
   for (let x = 0; x < w; ++x) {
     for (let y = 0; y < h; ++y) {
       // Diffuse light brightness
-      // txdata[(y * 2 * w + w + x) * 4 + 0] = 0.5;
+      // wasmData[(y * 2 * w + w + x) * 4 + 0] = 0.5;
       // Distance ~ not used, any value
-      // txdata[(y * 2 * w + w + x) * 4 + 1] = 42;
+      // wasmData[(y * 2 * w + w + x) * 4 + 1] = 42;
       // Field vector
       const angle = freq * 2 * Math.PI * simplex.noise2D(x * mul, y * mul);
-      let valx = txdata[(y * 2 * w + w + x) * 4 + 2];
-      let valy = txdata[(y * 2 * w + w + x) * 4 + 3];
+      let valx = wasmData[(y * 2 * w + w + x) * 4 + 2];
+      let valy = wasmData[(y * 2 * w + w + x) * 4 + 3];
       if (rot) [valx, valy] = [-valy, valx];
       const noisex = gain * Math.cos(angle);
       const noisey = gain * Math.sin(angle);
       let vx = valx + noisex;
       let vy = valy + noisey;
       const len = Math.sqrt(vx ** 2 + vy ** 2);
-      txdata[(y * 2 * w + w + x) * 4 + 2] = vx / len;
-      txdata[(y * 2 * w + w + x) * 4 + 3] = vy / len;
+      wasmData[(y * 2 * w + w + x) * 4 + 2] = vx / len;
+      wasmData[(y * 2 * w + w + x) * 4 + 3] = vy / len;
     }
   }
 }
 
 function prepareDataDownload() {
-  let dataStr = txdata.length.toString();
-  for (let i = 0; i < txdata.length; ++i) {
+  let dataStr = wasmData.length.toString();
+  for (let i = 0; i < wasmData.length; ++i) {
     if ((i % 4) == 0) dataStr += "\n";
     else dataStr += " ";
-    dataStr += txdata[i].toString();
+    dataStr += wasmData[i].toString();
   }
   dataStr += "\n";
   let file;
   let data = [];
   data.push(dataStr);
-  let properties = { type: 'text/plain' };
-  try { file = new File(data, "data.txt", properties); }
-  catch { file = new Blob(data, properties); }
+  let properties = {type: 'text/plain'};
+  try {
+    file = new File(data, "data.txt", properties);
+  } catch {
+    file = new Blob(data, properties);
+  }
   let url = URL.createObjectURL(file);
   const elmDownload = document.getElementById("dldata");
   elmDownload.href = url;
@@ -162,28 +198,25 @@ function prepareDataDownload() {
 
 function zigHatch() {
 
-  const flg = instance.exports;
-
-  const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 4, 0);
-  console.log("initFlowlineGenerator: " + initRes);
-  if (initRes != 1) return;
-
-  const dataAddr = flg.getDataAddr();
-  const trgAddr = flg.getTrgAddr();
-  const zigData = new Float32Array(flg.memory.buffer, dataAddr, w * h * 2 * 4);
-  for (let i = 0; i < zigData.length; ++i)
-    zigData[i] = txdata[i];
-  let zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
+  const flg = instance1.exports;
+  wasmData = new Float32Array(flg.memory.buffer, wasmDataAddr, w * h * 2 * 4);
+  wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
 
   let startTime = performance.now();
-  flg.seedPRNG(BigInt(Math.floor(rand() * Math.pow(2, 32))));
-  flg.reset();
-  const nGenerated = flg.genFlowlines(zigData, zigData.length, zigTrg, zigTrg.length);
+  if (!params.animate) {
+    flg.seedPRNG(BigInt(Math.floor(rand() * Math.pow(2, 32))));
+    flg.reset(true);
+  }
+  const nGenerated = flg.genFlowlines(!params.animate);
+  wasmData = new Float32Array(flg.memory.buffer, wasmDataAddr, w * h * 2 * 4);
+  wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
   let endTime = performance.now();
-  zigTrg = new Uint32Array(flg.memory.buffer, trgAddr, 10_000_000);
-  console.log("genFlowlines: " + nGenerated);
-  let elapsed = endTime - startTime;
-  console.log("Elapsed: " + elapsed + " msec");
+
+  if (params.log_perf) {
+    console.log("genFlowlines: " + nGenerated);
+    let elapsed = endTime - startTime;
+    console.log("Elapsed: " + elapsed + " msec");
+  }
 
   ctx2D.fillStyle = "white";
   ctx2D.fillRect(0, 0, w, h);
@@ -194,9 +227,9 @@ function zigHatch() {
   let trgIx = 0;
   let lnCount = 0;
   let newPath = true;
-  while (lnCount < nGenerated && trgIx < zigTrg.length) {
-    const x = zigTrg[trgIx++];
-    const y = zigTrg[trgIx++];
+  while (lnCount < nGenerated && trgIx < wasmTrg.length) {
+    const x = wasmTrg[trgIx++];
+    const y = wasmTrg[trgIx++];
     if (x == 0xffffffff) {
       newPath = true;
       ++lnCount;
@@ -205,8 +238,7 @@ function zigHatch() {
     if (newPath) {
       ctx2D.moveTo(x, h - y);
       newPath = false;
-    }
-    else ctx2D.lineTo(x, h - y);
+    } else ctx2D.lineTo(x, h - y);
   }
   ctx2D.stroke();
 
@@ -224,7 +256,7 @@ function hatch() {
     if (x <= 0 || x >= w - 1 || y <= 0 || y >= h - 1)
       return null;
 
-    getVec4(txdata, w * 2, w + x, y, vec);
+    getVec4(wasmData, w * 2, w + x, y, vec);
     // distance = 0 means no object
     if (vec[1] == 0)
       return null;
@@ -242,7 +274,7 @@ function hatch() {
 
     // Phong lighting
     if (params.real_light) {
-      getVec4(txdata, w * 2, x, y, vec);
+      getVec4(wasmData, w * 2, x, y, vec);
       let val = Math.sqrt(vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2);
       if (val > 1) val = 1;
       val = val ** 1.2;
@@ -250,7 +282,7 @@ function hatch() {
     }
 
     // Diffuse lighting from viewpoint
-    getVec4(txdata, w * 2, w + x, y, vec);
+    getVec4(wasmData, w * 2, w + x, y, vec);
     return vec[0];
   }
 
@@ -284,9 +316,11 @@ function hatch() {
   }
   ctx2D.stroke();
 
-  let elapsed = endTime - startTime;
-  console.log("Hatching: " + elapsed + " msec");
-  console.log("# flowlines: " + flowLines.length);
+  if (params.log_perf) {
+    let elapsed = endTime - startTime;
+    console.log("Hatching: " + elapsed + " msec");
+    console.log("# flowlines: " + flowLines.length);
+  }
 }
 
 function getVec4(data, w, x, y, vec) {
@@ -304,19 +338,31 @@ function setPixel(imgd, x, y, r, g, b) {
   imgd.data[(y * w + x) * 4 + 3] = 255;
 }
 
-function initZigModule() {
+function initZigModule(w, h, ready) {
 
   const req = new XMLHttpRequest();
-  req.open('GET', 'flg.wasm');
+  req.open('GET', wasmUrl);
   req.responseType = 'arraybuffer';
   req.send();
 
   req.onload = function () {
     const bytes = req.response;
-    WebAssembly.instantiate(bytes, {
-      env: {}
-    }).then(result => {
-      instance = result.instance;
+    WebAssembly.instantiate(bytes, {env: {}}).then(result => {
+      instance1 = result.instance;
+      const flg = instance1.exports;
+
+      const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 4, 0);
+      if (initRes != 1) {
+        console.error("WASM error: initFlowlineGenerator");
+        ready();
+        return;
+      }
+
+      wasmDataAddr = flg.getDataAddr();
+      wasmTrgAddr = flg.getTrgAddr();
+      wasmData = new Float32Array(flg.memory.buffer, wasmDataAddr, w * h * 2 * 4);
+      wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
+      ready();
     });
   };
 

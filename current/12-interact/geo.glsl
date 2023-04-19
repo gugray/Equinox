@@ -5,35 +5,38 @@ float dot2( in vec3 v ) { return dot(v,v); }
 float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
 
 // Rotation matrix around the X axis
-mat3 rotateX(float theta) {
+mat4 rotateX(float theta) {
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(
-    vec3(1, 0, 0),
-    vec3(0, c, -s),
-    vec3(0, s, c)
+    return mat4(
+    vec4(1, 0, 0, 0),
+    vec4(0, c, -s, 0),
+    vec4(0, s, c, 0),
+    vec4(0, 0, 0, 1)
     );
 }
 
 // Rotation matrix around the Y axis.
-mat3 rotateY(float theta) {
+mat4 rotateY(float theta) {
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(
-    vec3(c, 0, s),
-    vec3(0, 1, 0),
-    vec3(-s, 0, c)
+    return mat4(
+    vec4(c, 0, s, 0),
+    vec4(0, 1, 0, 0),
+    vec4(-s, 0, c, 0),
+    vec4(0, 0, 0, 1)
     );
 }
 
 // Rotation matrix around the Z axis.
-mat3 rotateZ(float theta) {
+mat4 rotateZ(float theta) {
     float c = cos(theta);
     float s = sin(theta);
-    return mat3(
-    vec3(c, -s, 0),
-    vec3(s, c, 0),
-    vec3(0, 0, 1)
+    return mat4(
+    vec4(c, -s, 0, 0),
+    vec4(s, c, 0, 0),
+    vec4(0, 0, 1, 0),
+    vec4(0, 0, 0, 1)
     );
 }
 

@@ -79,11 +79,13 @@ vec3 phongIllumination(vec3 k_a, vec3 k_d, vec3 k_s, float alpha, vec3 p, vec3 N
     const vec3 ambientLight = 0.5 * vec3(1.0, 1.0, 1.0);
     vec3 color = ambientLight * k_a;
 
-    vec3 light1Pos = vec3(4.0 * sin(time), 2.0, 4.0 * cos(time));
+    float t = 8.;
+
+    vec3 light1Pos = vec3(4.0 * sin(t), 2.0, 4.0 * cos(t));
     vec3 light1Intensity = vec3(0.4, 0.4, 0.4);
     color += phongContribForLight(k_d, k_s, alpha, p, N, eye, light1Pos, light1Intensity);
 
-    vec3 light2Pos = vec3(2.0 * sin(0.37 * time), 2.0 * cos(0.37 * time), 2.0);
+    vec3 light2Pos = vec3(2.0 * sin(0.37 * t), 2.0 * cos(0.37 * t), 2.0);
     vec3 light2Intensity = vec3(0.4, 0.4, 0.4);
     color += phongContribForLight(k_d, k_s, alpha, p, N, eye, light2Pos, light2Intensity);
     return color;

@@ -91,8 +91,8 @@ pub const FlowlineGenerator = struct {
         self.alloc.destroy(self);
     }
 
-    pub fn reset(self: *FlowlineGenerator) void {
-        utils.shuffle(self.ixs);
+    pub fn reset(self: *FlowlineGenerator, reShuffle: bool) void {
+        if (reShuffle) utils.shuffle(self.ixs);
         self.nextIx = 0;
         self.grid.reset();
     }
