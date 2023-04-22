@@ -8,7 +8,11 @@ out vec4 outColor;
 
 uniform vec2 resolution;
 uniform float time;
-uniform bool onscreen;
+uniform float eyeFOV;
+uniform float eyeAzimuth;
+uniform float eyeAltitude;
+uniform float eyeDistance;
+uniform bool curvatureLight;
 
 #include "consts.glsl"
 #include "geo.glsl"
@@ -106,8 +110,10 @@ PointInfo calcPoint(vec2 coord) {
     res.dlum = 0.;
     res.dlumGradient = vec2(0.);
 
-    vec3 viewDir = rayDirection(45.0, resolution.xy, coord.xy);
-    vec3 eye = vec3(0., 0., 5.);
+    vec3 eye = vec3(cos(eyeAltitude) * sin(eyeAzimuth), sin(eyeAltitude), cos(eyeAltitude) * cos(eyeAzimuth));
+    eye *= eyeDistance;
+
+    vec3 viewDir = rayDirection(eyeFOV, resolution.xy, coord.xy);
     mat4 viewToWorld = viewMatrix(eye, vec3(0.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0));
     vec3 worldDir = (viewToWorld * vec4(viewDir, 0.0)).xyz;
 
@@ -150,10 +156,12 @@ void main() {
     PointInfo infoRight = calcPoint(vec2(min(resolution.x - 1., coord.x + e), coord.y));
 
     if (isPaneA) {
-        outColor = info.color;
-        //outColor = vec4(info.dlum, info.dlum, info.dlum, 1.);
+        if (curvatureLight) outColor = vec4(info.dlum, info.dlum, info.dlum, 1.);
+        else outColor = info.color;
     }
     else {
-        outColor = vec4(info.dlum, info.dist, infoRight.dlum - infoLeft.dlum, infoAbove.dlum - infoBelow.dlum);
+        float lum = clamp(info.color.r + info.color.b + info.color.g / 3., 0., 1.);
+        if (curvatureLight) lum = info.dlum;
+        outColor = vec4(lum, info.dist, infoRight.dlum - infoLeft.dlum, infoAbove.dlum - infoBelow.dlum);
     }
 }

@@ -77,7 +77,7 @@ mat4 viewMatrix(vec3 eye, vec3 center, vec3 up) {
  */
 vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
     vec2 xy = fragCoord - size / 2.0;
-    float z = size.y / tan(radians(fieldOfView) / 2.0) / 2.;
+    float z = size.y / tan(fieldOfView / 2.0) / 2.;
     return normalize(vec3(xy, -z));
 }
 

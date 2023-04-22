@@ -22,10 +22,17 @@ setRandomGenerator(mulberry32(42));
 init(setup, false);
 
 const params = {
-  real_light: false,
+  view: {
+    fov: 45,
+    azimuth: 0,
+    altitude: 0,
+    distance: 5,
+  },
+  curvature_light: false,
   animate: false,
   hatch_scene: false,
-  add_noise: true,
+  rotate_field: true,
+  noise_gain: 0.001,
   use_wasm_hatcher: true,
   log_perf: false,
 };
@@ -48,44 +55,97 @@ function setupControls() {
   };
 
   gui = new GUI();
+  const fView = gui.addFolder("View");
+  fView.add(params.view, "fov", 15, 150).onChange(changing).onFinishChange(update);
+  fView.add(params.view, "azimuth", -180, 180).onChange(changing).onFinishChange(update);
+  fView.add(params.view, "altitude", -89.99, 89.99).onChange(changing).onFinishChange(update);
+  fView.add(params.view, "distance", 0.1, 100).onChange(changing).onFinishChange(update);
   const fRender = gui.addFolder("Render");
-  fRender.add(params, "real_light").onFinishChange(onChanged);
+  fRender.add(params, "curvature_light").onFinishChange(update);
   fRender.add(params, "animate").onFinishChange((newVal) => {
     // Hasn't been animating yet, so must start now
     if (newVal == true) requestAnimationFrame(render);
   });
   const fHatching = gui.addFolder("Hatching");
-  fHatching.add(params, "hatch_scene").onFinishChange(onChanged);
-  fHatching.add(params, "add_noise").onFinishChange(onChanged);
-  fHatching.add(params, "use_wasm_hatcher").onFinishChange(onChanged);
+  fHatching.add(params, "hatch_scene").onFinishChange(update);
+  fHatching.add(params, "rotate_field").onFinishChange(update);
+  fHatching.add(params, "noise_gain", 0, 0.01).onFinishChange(update);
+  fHatching.add(params, "use_wasm_hatcher").onFinishChange(update);
   const fMisc = gui.addFolder("Misc");
-  fMisc.add(params, "log_perf").onFinishChange(onChanged);
+  fMisc.add(params, "log_perf").onFinishChange(update);
   fMisc.add(handler, "save");
   fMisc.add(handler, "load");
   fMisc.add(handler, "prepare_download");
 
-  function onChanged() {
+  let moveStart = null;
+
+  canvas2D.addEventListener("mousedown", (evt => {
+    if (params.hatch_scene) return;
+    moveStart = {
+      x: evt.screenX,
+      y: evt.screenY,
+      startAzimuth: params.view.azimuth,
+      startAltitude: params.view.altitude,
+    };
+  }));
+  document.addEventListener("mousemove", (evt) => {
+    if (!moveStart) return;
+    const dx = evt.screenX - moveStart.x;
+    const dy = evt.screenY - moveStart.y;
+    const dAzimuth = -dx / w * 360 * 2;
+    params.view.azimuth = toTwoDecimals(moveStart.startAzimuth + dAzimuth);
+    while (params.view.azimuth > 180) params.view.azimuth -= 360;
+    while (params.view.azimuth < -180) params.view.azimuth += 360;
+    const dAltitude = dy / h * 180 * 2;
+    params.view.altitude = toTwoDecimals(moveStart.startAltitude + dAltitude);
+    while (params.view.altitude >= 90) params.view.altitude = 89.99;
+    while (params.view.altitude <= -90) params.view.altitude = -89.99;
+    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    changing();
+  });
+  document.addEventListener("mouseup", () => {
+    moveStart = null;
+  });
+  canvas2D.addEventListener("wheel", (evt) => {
+    if (params.hatch_scene) return;
+    params.view.distance += evt.deltaY * 0.01;
+    if (params.view.distance < 0.1) params.view.distance = 0.1;
+    if (params.view.distance > 100) params.view.distance = 100;
+    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    changing();
+  });
+
+  function toTwoDecimals(f) {
+    return Math.round(f * 100) / 100;
+  }
+
+  function changing() {
+    if (params.hatch_scene) return;
+    update();
+  }
+
+  function update() {
     if (params.animate) return;
     requestAnimationFrame(render);
   }
-
 }
 
 
 function setup() {
 
-  // DAT.GUI
+  canvas2D = document.getElementById("canv2d");
+  webGLCanvas = document.getElementById("canv3d");
+  w = webGLCanvas.width;
+  h = webGLCanvas.height;
+
+  // LIL-GUI and mouse
   setupControls();
 
   // 2D overlay canvas (where we render the hatching)
-  canvas2D = document.getElementById("canv2d");
   ctx2D = canvas2D.getContext("2d");
 
   // 3D WebGL canvas, and twgl
-  webGLCanvas = document.getElementById("canv3d");
   gl = webGLCanvas.getContext("webgl2");
-  w = webGLCanvas.width;
-  h = webGLCanvas.height;
   twgl.addExtensionsToContext(gl);
 
   arrays = {
@@ -111,6 +171,11 @@ function render(time) {
   const uniforms = {
     time: params.animate ? time : 0,
     resolution: [w, h],
+    eyeFOV: Math.PI * params.view.fov / 180,
+    eyeAzimuth: Math.PI * params.view.azimuth / 180,
+    eyeAltitude: Math.PI * params.view.altitude / 180,
+    eyeDistance: params.view.distance,
+    curvatureLight: params.curvature_light,
   };
 
   // Rendering to canvas
@@ -139,31 +204,26 @@ function render(time) {
     // Fetch results, and hatch
     gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, wasmData);
 
-    if (params.add_noise) addNoise(true);
+    postprocessFlowfield(params.noise_gain, params.rotate_field);
     if (params.use_wasm_hatcher) zigHatch();
     else hatch();
   }
   if (params.animate) requestAnimationFrame(render);
 }
 
-function addNoise(rot) {
+function postprocessFlowfield(noiseGain, rot) {
   const simplex = new SimplexNoise(8956);
   const mul = 0.001;
   const freq = 2;
-  const gain = 0.001;
   for (let x = 0; x < w; ++x) {
     for (let y = 0; y < h; ++y) {
-      // Diffuse light brightness
-      // wasmData[(y * 2 * w + w + x) * 4 + 0] = 0.5;
-      // Distance ~ not used, any value
-      // wasmData[(y * 2 * w + w + x) * 4 + 1] = 42;
       // Field vector
       const angle = freq * 2 * Math.PI * simplex.noise2D(x * mul, y * mul);
       let valx = wasmData[(y * 2 * w + w + x) * 4 + 2];
       let valy = wasmData[(y * 2 * w + w + x) * 4 + 3];
       if (rot) [valx, valy] = [-valy, valx];
-      const noisex = gain * Math.cos(angle);
-      const noisey = gain * Math.sin(angle);
+      const noisex = noiseGain * Math.cos(angle);
+      const noisey = noiseGain * Math.sin(angle);
       let vx = valx + noisex;
       let vy = valy + noisey;
       const len = Math.sqrt(vx ** 2 + vy ** 2);
@@ -194,6 +254,7 @@ function prepareDataDownload() {
   const elmDownload = document.getElementById("dldata");
   elmDownload.href = url;
   elmDownload.download = "data.txt";
+  elmDownload.style.display = "block";
 }
 
 function zigHatch() {
@@ -297,7 +358,7 @@ function hatch() {
   while (true) {
     const [flPoints, flLength] = flgen.genFlowLine();
     if (!flPoints) break;
-    if (flPoints.length < 2 || flLength < flopt.minCellSize) continue;
+    if (flPoints.length < 3 || flLength < flopt.minCellSize) continue;
     flowLines.push(flPoints);
   }
   let endTime = performance.now();

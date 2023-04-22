@@ -11,6 +11,5 @@ footer {
   position: fixed; bottom: 0; width: 100%; z-index: 1; padding: 10px; margin: 0;
   font-family: sans-serif; color: #ccc; background-color: #20202080;
 }
-footer a#dldata {
-  display: block; float: right; color: hsl(240, 57%, 62%); text-decoration: none;
-}
+footer div { float: right; color: #808080; margin-left: 10px; }
+footer a#dldata { display: none; float: right; margin-left: 10px; color: hsl(240, 57%, 62%); text-decoration: none; }
