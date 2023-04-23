@@ -7,8 +7,11 @@ import * as twgl from "twgl.js";
 import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
+import {SVGGenerator} from "./app-svg.js";
 
 const wasmUrl = "flg.wasm";
+const minCellSz = 6;
+const maxCellSz = 24;
 
 let gui;
 let status = () => {};
@@ -18,6 +21,7 @@ let arrays, bufferInfo; // Used to drive simple vertex shader
 let attachments, framebuf; // Used when rendering to texture
 let instance1;
 let wasmDataAddr, wasmTrgAddr, wasmData, wasmTrg;
+let nGenerated = 0;
 
 setRandomGenerator(mulberry32(42));
 init(setup, false);
@@ -60,8 +64,11 @@ function setupControls() {
       if (!json) return;
       gui.load(JSON.parse(json));
     },
-    prepare_download: () => {
+    download_data: () => {
       prepareDataDownload();
+    },
+    download_svg: () => {
+      prepareSVGDownload();
     },
   };
 
@@ -94,7 +101,8 @@ function setupControls() {
   fMisc.add(params, "log_perf").onFinishChange(update);
   fMisc.add(handler, "save");
   fMisc.add(handler, "load");
-  fMisc.add(handler, "prepare_download");
+  fMisc.add(handler, "download_data").name("download data");
+  fMisc.add(handler, "download_svg").name("generate svg");
 
   let moveStart = null;
 
@@ -196,6 +204,8 @@ function render(time) {
   if (!params.animate) status("~/~");
   let startTime = performance.now();
 
+  nGenerated = 0;
+
   const angleToVec = (azimuth, altitude) => {
     return [
       Math.cos(Math.PI * altitude / 180) * Math.sin(Math.PI * azimuth / 180),
@@ -273,6 +283,46 @@ function postprocessFlowfield(noiseGain, rot) {
   }
 }
 
+function prepareSVGDownload() {
+
+  const gen = new SVGGenerator(w, h, 2 * h, w);
+  gen.addLayer("0-black", "#000000");
+
+  const flg = instance1.exports;
+  wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
+  let nAdded = 0;
+  let i = 0;
+  while (nAdded < nGenerated) {
+    const startIx = i;
+    while (wasmTrg[i] != 0xffffffff) i += 2;
+    gen.addWASMPath(0, wasmTrg, startIx, i);
+    i += 2;
+    ++nAdded;
+  }
+
+  const d = new Date();
+  const dateStr = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" +
+    ("0" + d.getDate()).slice(-2) + "!" +
+    ("0" + d.getHours()).slice(-2) + "-" + ("0" + d.getMinutes()).slice(-2);
+  const fname = "eq-" + dateStr + ".svg";
+
+  let file;
+  let data = [];
+  data.push(gen.generate());
+  let properties = {type: 'image/svg+xml'};
+  try {
+    file = new File(data, fname, properties);
+  } catch {
+    file = new Blob(data, properties);
+  }
+  let url = URL.createObjectURL(file);
+  const elmDownload = document.getElementById("download");
+  elmDownload.href = url;
+  elmDownload.download = fname;
+  elmDownload.style.display = "block";
+
+}
+
 function prepareDataDownload() {
   let dataStr = wasmData.length.toString();
   for (let i = 0; i < wasmData.length; ++i) {
@@ -291,7 +341,7 @@ function prepareDataDownload() {
     file = new Blob(data, properties);
   }
   let url = URL.createObjectURL(file);
-  const elmDownload = document.getElementById("dldata");
+  const elmDownload = document.getElementById("download");
   elmDownload.href = url;
   elmDownload.download = "data.txt";
   elmDownload.style.display = "block";
@@ -308,7 +358,7 @@ function zigHatch() {
     flg.seedPRNG(BigInt(Math.floor(rand() * Math.pow(2, 32))));
     flg.reset(true);
   }
-  const nGenerated = flg.genFlowlines(!params.animate, params.log_grid);
+  nGenerated = flg.genFlowlines(!params.animate, params.log_grid);
   wasmData = new Float32Array(flg.memory.buffer, wasmDataAddr, w * h * 2 * 4);
   wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
   let endTime = performance.now();
@@ -391,7 +441,7 @@ function hatch() {
   const flopt = {
     width: w, height: h, field: flowFun, stepSize: 4, maxLength: 0,
     density: densityFun,
-    minCellSize: 3, maxCellSize: 24, nShades: 12, logGrid: params.log_grid,
+    minCellSize: minCellSz, maxCellSize: maxCellSz, nShades: 12, logGrid: params.log_grid,
   };
   const flowLines = [];
   const flgen = new FlowLineGenerator(flopt);
@@ -430,16 +480,6 @@ function getVec4(data, w, x, y, vec) {
     vec[i] = data[(y * w + x) * 4 + i];
 }
 
-function setPixel(imgd, x, y, r, g, b) {
-  const w = imgd.width;
-  const h = imgd.height;
-  y = h - y - 1;
-  imgd.data[(y * w + x) * 4] = Math.round(r);
-  imgd.data[(y * w + x) * 4 + 1] = Math.round(g);
-  imgd.data[(y * w + x) * 4 + 2] = Math.round(b);
-  imgd.data[(y * w + x) * 4 + 3] = 255;
-}
-
 function initZigModule(w, h, ready) {
 
   const req = new XMLHttpRequest();
@@ -453,7 +493,7 @@ function initZigModule(w, h, ready) {
       instance1 = result.instance;
       const flg = instance1.exports;
 
-      const initRes = flg.initFlowlineGenerator(w, h, 3, 24, 12, true, 4, 0);
+      const initRes = flg.initFlowlineGenerator(w, h, minCellSz, maxCellSz, 12, true, 4, 0);
       if (initRes != 1) {
         console.error("WASM error: initFlowlineGenerator");
         ready();

@@ -91,7 +91,8 @@ PointInfo calcPoint(vec2 coord) {
         res.color.xyz += vec3(strength * shadow);
     }
     // Ambient light, plus some light from above
-    float ambient = ambientLightStrength * (1.0 + 0.5 * normal.y);
+    //float ambient = ambientLightStrength * (1.0 + 0.5 * normal.y);
+    float ambient = ambientLightStrength;
     res.color.xyz += vec3(ambient);
 
     // // Phong illumunation

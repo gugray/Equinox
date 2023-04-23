@@ -12,4 +12,4 @@ footer {
   font-family: sans-serif; color: #ccc; background-color: #20202080;
 }
 footer div { float: right; color: #808080; margin-left: 10px; }
-footer a#dldata { display: none; float: right; margin-left: 10px; color: hsl(240, 57%, 62%); text-decoration: none; }
+footer a#download { display: none; float: right; margin-left: 10px; color: hsl(240, 57%, 62%); text-decoration: none; }
