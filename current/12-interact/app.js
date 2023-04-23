@@ -11,6 +11,7 @@ import {FlowLineGenerator, Vec2} from "./app-hatch.js";
 const wasmUrl = "flg.wasm";
 
 let gui;
+let status = () => {};
 let canvas2D, ctx2D;
 let webGLCanvas, gl, w, h, progInfo;
 let arrays, bufferInfo; // Used to drive simple vertex shader
@@ -28,11 +29,21 @@ const params = {
     altitude: 0,
     distance: 5,
   },
+  lights: {
+    l1_azimuth: 75,
+    l1_altitude: 30,
+    l1_strength: 0.2,
+    l2_azimuth: -75,
+    l2_altitude: 30,
+    l2_strength: 0.2,
+    amb_strength: 0.05,
+  },
   curvature_light: false,
   animate: false,
   hatch_scene: false,
   rotate_field: true,
   noise_gain: 0.001,
+  log_grid: true,
   use_wasm_hatcher: true,
   log_perf: false,
 };
@@ -61,6 +72,13 @@ function setupControls() {
   fView.add(params.view, "altitude", -89.99, 89.99).onChange(changing).onFinishChange(update);
   fView.add(params.view, "distance", 0.1, 100).onChange(changing).onFinishChange(update);
   const fRender = gui.addFolder("Render");
+  fRender.add(params.lights, "l1_azimuth", -180, 180).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "l1_altitude", -89.99, 89.99).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "l1_strength", 0, 1).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "l2_azimuth", -180, 180).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "l2_altitude", -89.99, 89.99).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "l2_strength", 0, 1).onChange(changing).onFinishChange(update);
+  fRender.add(params.lights, "amb_strength", 0, 0.3).onChange(changing).onFinishChange(update);
   fRender.add(params, "curvature_light").onFinishChange(update);
   fRender.add(params, "animate").onFinishChange((newVal) => {
     // Hasn't been animating yet, so must start now
@@ -70,6 +88,7 @@ function setupControls() {
   fHatching.add(params, "hatch_scene").onFinishChange(update);
   fHatching.add(params, "rotate_field").onFinishChange(update);
   fHatching.add(params, "noise_gain", 0, 0.01).onFinishChange(update);
+  fHatching.add(params, "log_grid").onFinishChange(update);
   fHatching.add(params, "use_wasm_hatcher").onFinishChange(update);
   const fMisc = gui.addFolder("Misc");
   fMisc.add(params, "log_perf").onFinishChange(update);
@@ -130,6 +149,11 @@ function setupControls() {
   }
 }
 
+function setupStatus() {
+  const elm = document.getElementById("update");
+  if (!elm) return;
+  status = txt => elm.innerText = txt;
+}
 
 function setup() {
 
@@ -140,6 +164,9 @@ function setup() {
 
   // LIL-GUI and mouse
   setupControls();
+
+  // Log updates to status bar
+  setupStatus();
 
   // 2D overlay canvas (where we render the hatching)
   ctx2D = canvas2D.getContext("2d");
@@ -166,7 +193,15 @@ function setup() {
 
 function render(time) {
 
+  if (!params.animate) status("~/~");
   let startTime = performance.now();
+
+  const angleToVec = (azimuth, altitude) => {
+    return [
+      Math.cos(Math.PI * altitude / 180) * Math.sin(Math.PI * azimuth / 180),
+      Math.sin(Math.PI * altitude / 180),
+      Math.cos(Math.PI * altitude / 180) * Math.cos(Math.PI * altitude / 180)]
+  }
 
   const uniforms = {
     time: params.animate ? time : 0,
@@ -176,6 +211,11 @@ function render(time) {
     eyeAltitude: Math.PI * params.view.altitude / 180,
     eyeDistance: params.view.distance,
     curvatureLight: params.curvature_light,
+    light1Vec: angleToVec(params.lights.l1_azimuth, params.lights.l1_altitude),
+    light1Strength: params.lights.l1_strength,
+    light2Vec: angleToVec(params.lights.l2_azimuth, params.lights.l2_altitude),
+    light2Strength: params.lights.l2_strength,
+    ambientLightStrength: params.lights.amb_strength,
   };
 
   // Rendering to canvas
@@ -268,7 +308,7 @@ function zigHatch() {
     flg.seedPRNG(BigInt(Math.floor(rand() * Math.pow(2, 32))));
     flg.reset(true);
   }
-  const nGenerated = flg.genFlowlines(!params.animate);
+  const nGenerated = flg.genFlowlines(!params.animate, params.log_grid);
   wasmData = new Float32Array(flg.memory.buffer, wasmDataAddr, w * h * 2 * 4);
   wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
   let endTime = performance.now();
@@ -278,6 +318,7 @@ function zigHatch() {
     let elapsed = endTime - startTime;
     console.log("Elapsed: " + elapsed + " msec");
   }
+  status(nGenerated);
 
   ctx2D.fillStyle = "white";
   ctx2D.fillRect(0, 0, w, h);
@@ -306,7 +347,6 @@ function zigHatch() {
 }
 
 function hatch() {
-
 
   const vec = [0, 0, 0, 0];
 
@@ -351,8 +391,8 @@ function hatch() {
   const flopt = {
     width: w, height: h, field: flowFun, stepSize: 4, maxLength: 0,
     density: densityFun,
-    minCellSize: 3, maxCellSize: 24, nShades: 12, logGrid: true
-  }
+    minCellSize: 3, maxCellSize: 24, nShades: 12, logGrid: params.log_grid,
+  };
   const flowLines = [];
   const flgen = new FlowLineGenerator(flopt);
   while (true) {
@@ -377,6 +417,7 @@ function hatch() {
   }
   ctx2D.stroke();
 
+  status(flowLines.length);
   if (params.log_perf) {
     let elapsed = endTime - startTime;
     console.log("Hatching: " + elapsed + " msec");

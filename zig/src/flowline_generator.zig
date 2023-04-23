@@ -8,13 +8,14 @@ const ArrayList = std.ArrayList;
 const og = @import("occupancy_grid.zig");
 const utils = @import("utils.zig");
 const Vec2 = utils.Vec2;
+const FieldVal = utils.FieldVal;
 
 // This helps all tests get executed, even for unreferenced code
 test {
     std.testing.refAllDecls(@This());
 }
 
-const fieldFun = fn (pt: Vec2) Vec2;
+const fieldFun = fn (pt: Vec2) FieldVal;
 const densityFun = fn (pt: Vec2) f32;
 
 pub const Params = struct {
@@ -91,10 +92,23 @@ pub const FlowlineGenerator = struct {
         self.alloc.destroy(self);
     }
 
-    pub fn reset(self: *FlowlineGenerator, reShuffle: bool) void {
+    pub fn reset(self: *FlowlineGenerator, reShuffle: bool) !void {
         if (reShuffle) utils.shuffle(self.ixs);
         self.nextIx = 0;
-        self.grid.reset();
+        if (self.grid.logarithmic == self.params.logGrid) {
+            self.grid.reset();
+        } else {
+            self.grid.destroy();
+            self.grid = try og.OccupancyGrid.create(
+                self.alloc,
+                self.params.width,
+                self.params.height,
+                self.params.minCellSize,
+                self.params.maxCellSize,
+                self.params.nShades,
+                self.params.logGrid,
+            );
+        }
     }
 
     pub fn genFlowline(self: *FlowlineGenerator, field: *const fieldFun, density: *const densityFun) !Flowline {
@@ -108,7 +122,7 @@ pub const FlowlineGenerator = struct {
         try self.fwPoints.append(startPt);
         try self.bkPoints.append(startPt);
         var startVal = field(startPt);
-        if (startVal.isNan()) {
+        if (startVal.dir.isNan()) {
             return .{ .fwPoints = self.fwPoints.items, .bkPoints = self.bkPoints.items };
         }
         var level = @floatToInt(u32, math.round(@intToFloat(f32, self.grid.layers.len - 1) * density(startPt)));
@@ -177,7 +191,7 @@ pub const FlowlineGenerator = struct {
         if (pt.isNan())
             return false;
         var funHere = field(pt);
-        if (funHere.isNan() or funHere.len() == 0)
+        if (funHere.dir.isNan() or funHere.dir.len() == 0)
             return false;
         var change = self.rk4(field, pt);
         if (change.isNan())
@@ -188,6 +202,18 @@ pub const FlowlineGenerator = struct {
             return false;
         if (newPt.y < 0 or newPt.y >= @intToFloat(f32, self.params.height))
             return false;
+        const newFunVal = field(newPt);
+        if (newFunVal.dir.isNan())
+            return false;
+        if (points.items.len > 1) {
+            const prevPt = points.items[points.items.len - 2];
+            const prevFunVal = field(prevPt);
+            const prevDistDelta = math.fabs(funHere.dist - prevFunVal.dist);
+            // _ = prevDistDelta;
+            const newDistDelta = math.fabs(newFunVal.dist - funHere.dist);
+            if (newDistDelta > prevDistDelta * 3)
+                return false;
+        }
         const level = @floatToInt(u32, math.round(@intToFloat(f32, self.grid.layers.len - 1) * density(newPt)));
         self.grid.getPoss(newPt, newGridPoss);
         if (newGridPoss[level] != oldGridPoss[level] and self.grid.isOccupied(newPt, level))
@@ -225,14 +251,14 @@ pub const FlowlineGenerator = struct {
     fn rk4(self: *FlowlineGenerator, field: *const fieldFun, pt: Vec2) Vec2 {
         const step = self.params.stepSize;
         var k1 = field(pt);
-        if (k1.isNan()) return Vec2.nan();
-        var k2 = field(pt.add(k1.mul(step * 0.5)));
-        if (k2.isNan()) return Vec2.nan();
-        var k3 = field(pt.add(k2.mul(step * 0.5)));
-        if (k3.isNan()) return Vec2.nan();
-        var k4 = field(pt.add(k3.mul(step)));
-        if (k4.isNan()) return Vec2.nan();
-        var res = k1.mul(step / 6).add(k2.mul(step / 3)).add(k3.mul(step / 3)).add(k4.mul(step / 6));
+        if (k1.dir.isNan()) return Vec2.nan();
+        var k2 = field(pt.add(k1.dir.mul(step * 0.5)));
+        if (k2.dir.isNan()) return Vec2.nan();
+        var k3 = field(pt.add(k2.dir.mul(step * 0.5)));
+        if (k3.dir.isNan()) return Vec2.nan();
+        var k4 = field(pt.add(k3.dir.mul(step)));
+        if (k4.dir.isNan()) return Vec2.nan();
+        var res = k1.dir.mul(step / 6).add(k2.dir.mul(step / 3)).add(k3.dir.mul(step / 3)).add(k4.dir.mul(step / 6));
         return res;
     }
 };
@@ -242,11 +268,11 @@ fn testDensity(pt: Vec2) f32 {
     return 0;
 }
 
-fn testField(pt: Vec2) Vec2 {
+fn testField(pt: Vec2) FieldVal {
     _ = pt;
-    var res: Vec2 = .{ .x = 1, .y = 1 };
-    res.normalize();
-    return res;
+    var dir: Vec2 = .{ .x = 1, .y = 1 };
+    dir.normalize();
+    return .{ .dir = dir, .dist = 1 };
 }
 
 test "generate a flow line" {

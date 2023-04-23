@@ -27,6 +27,7 @@ pub const OccupancyGrid = struct {
     alloc: Allocator,
     width: u32,
     height: u32,
+    logarithmic: bool,
 
     /// Grid dimensions and cell sizes at the different levels
     layers: []LayerInfo,
@@ -39,6 +40,7 @@ pub const OccupancyGrid = struct {
         self.alloc = alloc;
         self.width = width;
         self.height = height;
+        self.logarithmic = logarithmic;
 
         self.layers = try alloc.alloc(LayerInfo, nSizes);
 

@@ -80,4 +80,3 @@ vec3 rayDirection(float fieldOfView, vec2 size, vec2 fragCoord) {
     float z = size.y / tan(fieldOfView / 2.0) / 2.;
     return normalize(vec3(xy, -z));
 }
-

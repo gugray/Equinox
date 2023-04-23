@@ -11,7 +11,7 @@
 float march(vec3 eye, vec3 marchingDirection, float start, float end) {
     float depth = start;
     for (int i = 0; i < MAX_MARCHING_STEPS; i++) {
-        float dist = sceneSDF(eye + depth * marchingDirection);
+        float dist = map(eye + depth * marchingDirection);
         if (dist < EPSILON) {
             return depth;
         }

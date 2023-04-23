@@ -46,6 +46,11 @@ test "Vec2 returns its length" {
     try expect(l == 5);
 }
 
+pub const FieldVal = struct {
+    dir: Vec2,
+    dist: f32,
+};
+
 pub var prng: std.rand.DefaultPrng = std.rand.DefaultPrng.init(0);
 pub var rand = prng.random();
 

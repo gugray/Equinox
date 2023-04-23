@@ -6,6 +6,7 @@ const flg = @import("flowline_generator.zig");
 const gpall = @import("alloc.zig").gpall;
 const utils = @import("utils.zig");
 const Vec2 = utils.Vec2;
+const FieldVal = utils.FieldVal;
 
 // This helps all tests get executed, even for unreferenced code
 test {
@@ -73,7 +74,7 @@ test "Execute initFlowlineGenerator" {
 }
 
 export fn reset(reShuffle: bool) void {
-    g_flgen.reset(reShuffle);
+    if (g_flgen.reset(reShuffle)) |_| {}
 }
 
 export fn getDataAddr() [*]f32 {
@@ -96,24 +97,24 @@ fn density(pt: Vec2) f32 {
     // g_data[(y * w * 2 + x) * 4];
 }
 
-fn field(pt: Vec2) Vec2 {
+fn field(pt: Vec2) FieldVal {
     const w = g_flgen.params.width;
     const h = g_flgen.params.height;
     const x = @floatToInt(i32, math.floor(pt.x));
     const y = @floatToInt(i32, math.floor(pt.y));
     if (x < 1 or x >= w - 1 or y < 1 or y >= h - 1)
-        return Vec2.nan();
+        return .{ .dir = Vec2.nan(), .dist = math.nan_f32 };
     var dist = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 1];
     if (dist == 0)
-        return Vec2.nan();
-    var res: Vec2 = .{
+        return .{ .dir = Vec2.nan(), .dist = dist };
+    var dir: Vec2 = .{
         .x = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 2],
         .y = g_data[(@intCast(u32, y) * w * 2 + w + @intCast(u32, x)) * 4 + 3],
     };
-    const len = res.len();
-    if (len < 0.00001) return Vec2.nan();
-    res = res.mul(1 / len);
-    return res;
+    const len = dir.len();
+    if (len < 0.00001) return .{ .dir = Vec2.nan(), .dist = dist };
+    dir = dir.mul(1 / len);
+    return .{ .dir = dir, .dist = dist };
 }
 
 fn savePoint(pt: Vec2) void {
@@ -140,10 +141,11 @@ fn saveFlowline(fwPoints: []Vec2, bkPoints: []Vec2) void {
     g_trg_pos += 1;
 }
 
-export fn genFlowlines(reShuffle: bool) i32 {
+export fn genFlowlines(reShuffle: bool, logGrid: bool) i32 {
     var nLines: i32 = 0;
     g_trg_pos = 0;
-    g_flgen.reset(reShuffle);
+    g_flgen.params.logGrid = logGrid;
+    if (g_flgen.reset(reShuffle)) |_| {}
     while (true) {
         if (g_flgen.genFlowline(field, density)) |fl| {
             if (fl.fwPoints.len == 0) break;
@@ -221,7 +223,7 @@ fn doLargeDataTest() !void {
     });
 
     const msStart = std.time.milliTimestamp();
-    var nLines = genFlowlines(true);
+    var nLines = genFlowlines(true, true);
     const msElapsed = std.time.milliTimestamp() - msStart;
     std.debug.print("\n\n# flowlines: {d} in {d} msec\n\n", .{ nLines, msElapsed });
 }
