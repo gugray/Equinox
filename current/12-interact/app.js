@@ -8,6 +8,7 @@ import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
 import {FlowLineGenerator, Vec2} from "./app-hatch.js";
 import {SVGGenerator} from "./app-svg.js";
+import {StreamlineGenerator} from "./app-adajo.js";
 
 const wasmUrl = "flg.wasm";
 const minCellSz = 6;
@@ -256,7 +257,8 @@ function render(time) {
 
     postprocessFlowfield(params.noise_gain, params.rotate_field);
     if (params.use_wasm_hatcher) zigHatch();
-    else hatch();
+    // else hatch();
+    else jobardHatch();
   }
   if (params.animate) requestAnimationFrame(render);
 }
@@ -394,6 +396,89 @@ function zigHatch() {
   }
   ctx2D.stroke();
 
+}
+
+function jobardHatch() {
+
+  const vec = [0, 0, 0, 0];
+
+  const flowFun = (pt) => {
+    let x = Math.floor(pt.x);
+    let y = Math.floor(pt.y);
+    if (x <= 0 || x >= w - 1 || y <= 0 || y >= h - 1) return null;
+    getVec4(wasmData, w * 2, w + x, y, vec);
+    if (vec[1] == 0) return null;
+    let res = new Vec2(vec[2], vec[3]);
+    if (res.length() < 0.00001) return null;
+    res.normalize();
+    return res;
+  };
+
+  const densityFun = (pt) => {
+    let x = Math.floor(pt.x);
+    let y = Math.floor(pt.y);
+    let val;
+    // Phong lighting
+    if (params.real_light) {
+      getVec4(wasmData, w * 2, x, y, vec);
+      val = Math.sqrt(vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2);
+      if (val > 1) val = 1;
+      if (val < 0) val = 0;
+    }
+    // Diffuse lighting from viewpoint
+    else {
+      getVec4(wasmData, w * 2, w + x, y, vec);
+      val = vec[0];
+      if (val < 0) val = 0;
+      if (val > 1) val = 1;
+    }
+    val = 6 + 60 * Math.pow(val, 2);
+    return val;
+  }
+
+
+  const flowLines = [];
+  let jstream = new StreamlineGenerator({
+    vectorField: flowFun,
+    density: densityFun,
+    boundingBox: {left: 0, top: 0, width: w, height: h},
+    dStart: 10,
+    dStop: 3.1,
+    timeStep: 2,
+    forwardOnly: false,
+    onStreamlineAdded: points => flowLines.push(points),
+  });
+  jstream.run();
+  waitForJobard();
+
+  function waitForJobard() {
+    if (jstream.running) {
+      setTimeout(waitForJobard, 50);
+    }
+    else {
+      status(flowLines.length);
+      if (params.log_perf) {
+        let elapsed = endTime - startTime;
+        console.log("Hatching: " + elapsed + " msec");
+        console.log("# flowlines: " + flowLines.length);
+      }
+    }
+
+    ctx2D.fillStyle = "white";
+    ctx2D.fillRect(0, 0, w, h);
+    ctx2D.fill();
+    ctx2D.strokeStyle = "black";
+    ctx2D.lineWidth = 2;
+    ctx2D.beginPath();
+    for (const pts of flowLines) {
+      ctx2D.moveTo(pts[0].x, h - pts[0].y);
+      for (let i = 1; i < pts.length; ++i) {
+        ctx2D.lineTo(pts[i].x, h - pts[i].y);
+      }
+    }
+    ctx2D.stroke();
+
+  }
 }
 
 function hatch() {
