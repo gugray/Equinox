@@ -13,17 +13,18 @@ class StreamlineGenerator {
 
     this.options = options;
 
-    const bbox = options.boundingBox;
     if (!options.seed) {
       options.seed = new Vector(
-        Math.random() * bbox.width + bbox.left,
-        Math.random() * bbox.height + bbox.top
+        Math.random() * options.width,
+        Math.random() * options.height
       );
     }
 
     // Lookup grid helps to quickly tell if there are points nearby
-    this.startMask = new Mask(bbox, options.timeStep);
-    this.stopMask = new Mask(bbox, options.timeStep);
+    // this.startMask = new CanvasMask(options.width, options.height);
+    // this.stopMask = new CanvasMask(options.width, options.height);
+    this.startMask = new BitMasker(options.width, options.height);
+    this.stopMask = new BitMasker(options.width, options.height);
 
     if (!options.stepsPerIteration)
       options.stepsPerIteration = 10;
@@ -109,81 +110,127 @@ class StreamlineGenerator {
   }
 }
 
+class BitMasker {
+  constructor(width, height, debugCanvas) {
+    this.w = Math.ceil(width / 8) * 8;
+    this.bytew = this.w / 8;
+    this.h = height;
+    this.data = new Uint8Array(this.bytew * this.h);
+    this.data.fill(0);
 
-class Mask {
-  constructor(bbox, timeStep, id) {
-
-    this.bbox = bbox;
-    this.timeStep = timeStep;
-
-    const dpr = window.devicePixelRatio;
-
-    this.elm = document.createElement("canvas");
-    this.elm.width = bbox.width;
-    this.elm.height = bbox.height;
-
-    if (id) {
-      this.elm.id = id;
-      this.elm.style.width = (bbox.width / dpr) + "px";
-      this.elm.style.height = (bbox.height / dpr) + "px";
-      this.elm.style.display = "block";
-      document.body.appendChild(this.elm);
-    }
-
-    this.ctx = this.elm.getContext("2d");
-    this.ctx.fillStyle = "black";
-    this.ctx.fillRect(0, 0, bbox.width, bbox.height);
-    this.ctx.fill();
-    this.ctx.fillStyle = "red";
-    this.ctx.strokeStyle = "red";
-    this.ctx.lineWidth = 0;
+    this.debugCanvas = debugCanvas;
+    if (debugCanvas) this.initDebug();
   }
 
-  fill(pt1, sep1, pt2, sep2) {
-    const x1 = pt1.x - this.bbox.left;
-    const y1 = pt1.y - this.bbox.top;
-    const x2 = pt2.x - this.bbox.left;
-    const y2 = pt2.y - this.bbox.top;
-    let dx = pt2.x - pt1.x;
-    let dy = pt2.y - pt1.y;
-    dx /= this.timeStep;
-    dy /= this.timeStep;
-    const region = new Path2D();
-    region.moveTo(x1 + dy * sep1, y1 - dx * sep1);
-    region.lineTo(x2 + dy * sep2, y2 - dx * sep2);
-    region.lineTo(x2 - dy * sep2, y2 + dx * sep2);
-    region.lineTo(x1 - dy * sep1, y1 + dx * sep1);
-    region.closePath();
-    this.ctx.fill(region);
+  initDebug() {
+    const dpr = window.devicePixelRatio;
+    this.elm = document.createElement("canvas");
+    this.elm.width = this.w;
+    this.elm.height = this.h;
+    this.elm.id = "startCanv";
+    this.elm.style.width = (this.w / dpr) + "px";
+    this.elm.style.height = (this.h / dpr) + "px";
+    this.elm.style.display = "block";
+    document.body.appendChild(this.elm);
+  }
+
+  getPt(x, y) {
+    x = Math.floor(x);
+    y = Math.floor(y);
+    const ix = y * this.bytew + Math.floor(x / 8);
+    const bit = x % 8;
+    const mask = 1 << bit;
+    return (this.data[ix] & mask) != 0;
+  }
+
+  horizLine(x1, x2, y) {
+    const ix1 = y * this.bytew + Math.floor(x1 / 8);
+    const bit1 = x1 % 8;
+    const ix2 = y * this.bytew + Math.floor(x2 / 8);
+    const bit2 = x2 % 8;
+    let ix = ix1, bit = bit1;
+    while (ix < ix2 || bit < bit2) {
+      const mask = 1 << bit;
+      this.data[ix] |= mask;
+      bit += 1;
+      if (bit == 8) {
+        bit = 0;
+        ix += 1;
+      }
+    }
   }
 
   circle(pt, rad) {
-    this.ctx.beginPath();
-    this.ctx.arc(pt.x - this.bbox.left, pt.y - this.bbox.top, rad, 0, 2 * Math.PI);
-    this.ctx.fill();
+    pt.x = Math.floor(pt.x);
+    pt.y = Math.floor(pt.y);
+    rad = Math.round(rad);
+    let x = rad - 1;
+    let y = 0;
+    let dx = 1;
+    let dy = 1;
+    let err = dx - (rad << 1);
+
+    while (x >= y) {
+      this.horizLine(pt.x - x, pt.x + x, pt.y + y);
+      this.horizLine(pt.x - x, pt.x + x, pt.y - y);
+      this.horizLine(pt.x - y, pt.x + y, pt.y + x);
+      this.horizLine(pt.x - y, pt.x + y, pt.y - x);
+      if (err <= 0) {
+        y++;
+        err += dy;
+        dy += 2;
+      }
+      if (err > 0) {
+        x--;
+        dx += 2;
+        err += dx - (rad << 1);
+      }
+    }
+
+    if (this.debugCanvas)
+      this.debugFlush();
   }
-  
+
+  debugFlush() {
+
+    const setPixel = (imgd, x, y, r, g, b) => {
+      const w = imgd.width;
+      imgd.data[(y * this.w + x) * 4] = Math.round(r);
+      imgd.data[(y * this.w + x) * 4 + 1] = Math.round(g);
+      imgd.data[(y * this.w + x) * 4 + 2] = Math.round(b);
+      imgd.data[(y * this.w + x) * 4 + 3] = 255;
+    };
+
+    const ctx = this.elm.getContext("2d");
+    const imgd = ctx.getImageData(0, 0, this.w, this.h);
+    for (let x = 0; x < this.w; ++x) {
+      for (let y = 0; y < this.h; ++y) {
+        if (this.getPt(x, y))
+          setPixel(imgd, x, y, 255, 24, 24);
+      }
+    }
+    ctx.putImageData(imgd, 0, 0);
+  }
+
   isUsable(x, y) {
-    if (x < this.bbox.left || x >= this.bbox.left + this.bbox.width) return false;
-    if (y < this.bbox.top || y >= this.bbox.top + this.bbox.height) return false;
-    const data = this.ctx.getImageData(x - this.bbox.left, y - this.bbox.top, 1, 1).data;
-    return data[0] < 128;
+    if (x < 0 || x >= this.w || y < 0 || y >= this.h) return false;
+    return !this.getPt(x, y);
   }
 }
 
 
 class LookupGrid {
 
-  constructor(bbox, sep) {
-    this.bbox = bbox;
+  constructor(width, height, sep) {
+    this.width = width;
+    this.height = height;
     this.sep = sep;
-    this.bboxSize = Math.max(bbox.width, bbox.height);
+    this.bboxSize = Math.max(width, height);
     this.cellsCount = Math.ceil(this.bboxSize / sep);
     this.cells = new Map();
   }
 
   getCellByCoordinates(x, y) {
-    this.assertInBounds(x, y);
     const rowCoordinate = this.gridX(x);
     let row = this.cells.get(rowCoordinate);
     if (!row) {
@@ -200,20 +247,11 @@ class LookupGrid {
   }
 
   gridX(x) {
-    return Math.floor(this.cellsCount * (x - this.bbox.left) / this.bboxSize);
+    return Math.floor(this.cellsCount * x / this.bboxSize);
   }
 
   gridY(y) {
-    return Math.floor(this.cellsCount * (y - this.bbox.top) / this.bboxSize);
-  }
-
-  assertInBounds(x, y) {
-    if (this.bbox.left > x || this.bbox.left + this.bboxSize < x) {
-      throw new Error('x is out of bounds');
-    }
-    if (this.bbox.top > y || this.bbox.top + this.bboxSize < y) {
-      throw new Error('y is out of bounds');
-    }
+    return Math.floor(this.cellsCount * y / this.bboxSize);
   }
 
   findNearest(x, y) {
@@ -238,8 +276,8 @@ class LookupGrid {
   }
 
   isOutside(x, y) {
-    return x < this.bbox.left || x > this.bbox.left + this.bbox.width ||
-      y < this.bbox.top || y > this.bbox.top + this.bbox.height;
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return true;
+    return false;
   }
 
   occupyCoordinates(point) {
@@ -327,7 +365,7 @@ function newIntegrator(start, startMask, stopMask, config) {
   let state = FORWARD;
   let candidate = null;
   let lastCheckedSeed = -1;
-  let ownGrid = new LookupGrid(config.boundingBox, config.timeStep * 0.9);
+  let ownGrid = new LookupGrid(config.width, config.height, config.timeStep * 0.9);
 
   return {
     start: start,
@@ -439,10 +477,6 @@ function newIntegrator(start, startMask, stopMask, config) {
   function growByVelocity(pos, velocity) {
     candidate = pos.add(velocity);
     if (!stopMask.isUsable(candidate.x, candidate.y)) return;
-    // if (grid.isOutside(candidate.x, candidate.y)) return;
-    // if (grid.hasCloserThan(candidate.x, candidate.y, config.dStop - 1e-4)) return;
-
-    // did we hit any of our own points?
     if (ownGrid.hasCloserThan(candidate.x, candidate.y, config.timeStep * 0.9)) return;
 
     return candidate;

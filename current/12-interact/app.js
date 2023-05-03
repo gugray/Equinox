@@ -441,7 +441,8 @@ function jobardHatch() {
   let jstream = new StreamlineGenerator({
     vectorField: flowFun,
     density: densityFun,
-    boundingBox: {left: 0, top: 0, width: w, height: h},
+    width: w,
+    height: h,
     dStart: 10,
     dStop: 3.1,
     timeStep: 2,
