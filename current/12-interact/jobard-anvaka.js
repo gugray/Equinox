@@ -1,4 +1,4 @@
-import {Vector} from "./app-vector.js";
+import {Vector} from "./vector.js";
 
 class Cell {
   constructor() {

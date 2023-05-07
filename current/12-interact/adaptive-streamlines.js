@@ -1,4 +1,4 @@
-import {Vector} from "./app-vector.js";
+import {Vector} from "./vector.js";
 
 
 const STATE_INIT = 0;
@@ -21,10 +21,20 @@ class StreamlineGenerator {
     }
 
     // Lookup grid helps to quickly tell if there are points nearby
-    // this.startMask = new CanvasMask(options.width, options.height);
-    // this.stopMask = new CanvasMask(options.width, options.height);
-    this.startMask = new BitMasker(options.width, options.height);
-    this.stopMask = new BitMasker(options.width, options.height);
+    this.startMask = new Masker({
+      width: options.width,
+      height: options.height,
+      density: options.density,
+      minDist: options.minStartDist,
+      maxDist: options.maxStartDist,
+    });
+    this.stopMask = new Masker({
+      width: options.width,
+      height: options.height,
+      density: options.density,
+      minDist: options.minStartDist * options.endRatio,
+      maxDist: options.maxStartDist * options.endRatio,
+    });
 
     if (!options.stepsPerIteration)
       options.stepsPerIteration = 10;
@@ -101,22 +111,32 @@ class StreamlineGenerator {
   }
 
   addStreamLineToQueue() {
-    let streamLinePoints = this.integrator.getStreamline();
-    if (streamLinePoints.length > 1) {
+    let points = this.integrator.getStreamline();
+    if (points.length > 1 && (this.options.minPointsPerLine <= 0 || points.length >= this.options.minPointsPerLine)) {
       this.finishedStreamlineIntegrators.push(this.integrator);
       if (this.options.onStreamlineAdded)
-        this.options.onStreamlineAdded(streamLinePoints, this.options);
+        this.options.onStreamlineAdded(points, this.options);
     }
   }
 }
 
-class BitMasker {
-  constructor(width, height, debugCanvas) {
-    this.w = Math.ceil(width / 8) * 8;
-    this.bytew = this.w / 8;
+class Masker {
+  constructor({width, height, density, minDist, maxDist}, debugCanvas) {
+    this.w = width;
     this.h = height;
-    this.data = new Uint8Array(this.bytew * this.h);
-    this.data.fill(0);
+    // Point blocked if value is 255; free otherwise
+    // For [0, 254]: Minimum required distance from nearest point here is:
+    //   minDist + distRange * val / 254
+    this.distRange = maxDist - minDist;
+    this.minDist = minDist;
+    this.maxDist = maxDist;
+    this.data = new Uint8Array(this.w * this.h);
+    for (let y = 0; y < this.h; ++y) {
+      for (let x = 0; x < this.w; ++x) {
+        let val = Math.min(1, Math.max(0, density({x, y})));
+        this.data[y * this.w + x] = Math.round(val * 255);
+      }
+    }
 
     this.debugCanvas = debugCanvas;
     if (debugCanvas) this.initDebug();
@@ -134,29 +154,22 @@ class BitMasker {
     document.body.appendChild(this.elm);
   }
 
-  getPt(x, y) {
+  isFree(x, y) {
     x = Math.floor(x);
     y = Math.floor(y);
-    const ix = y * this.bytew + Math.floor(x / 8);
-    const bit = x % 8;
-    const mask = 1 << bit;
-    return (this.data[ix] & mask) != 0;
+    const ix = y * this.w + x;
+    return this.data[ix] != 255;
   }
 
-  horizLine(x1, x2, y) {
-    const ix1 = y * this.bytew + Math.floor(x1 / 8);
-    const bit1 = x1 % 8;
-    const ix2 = y * this.bytew + Math.floor(x2 / 8);
-    const bit2 = x2 % 8;
-    let ix = ix1, bit = bit1;
-    while (ix < ix2 || bit < bit2) {
-      const mask = 1 << bit;
-      this.data[ix] |= mask;
-      bit += 1;
-      if (bit == 8) {
-        bit = 0;
-        ix += 1;
-      }
+  horizLine(x1, x2, y, center) {
+    for (let x = x1; x <= x2; ++x) {
+      const ix = y * this.w + x;
+      let limit = this.data[ix];
+      if (limit == 255) continue;
+      limit = this.minDist + limit / 254 * this.distRange;
+      const dist = Math.sqrt((x - center.x) * (x - center.x) + (y- center.y) * (y - center.y));
+      if (limit < dist) continue;
+      this.data[ix] = 255;
     }
   }
 
@@ -171,10 +184,10 @@ class BitMasker {
     let err = dx - (rad << 1);
 
     while (x >= y) {
-      this.horizLine(pt.x - x, pt.x + x, pt.y + y);
-      this.horizLine(pt.x - x, pt.x + x, pt.y - y);
-      this.horizLine(pt.x - y, pt.x + y, pt.y + x);
-      this.horizLine(pt.x - y, pt.x + y, pt.y - x);
+      this.horizLine(pt.x - x, pt.x + x, pt.y + y, pt);
+      this.horizLine(pt.x - x, pt.x + x, pt.y - y, pt);
+      this.horizLine(pt.x - y, pt.x + y, pt.y + x, pt);
+      this.horizLine(pt.x - y, pt.x + y, pt.y - x, pt);
       if (err <= 0) {
         y++;
         err += dy;
@@ -186,26 +199,28 @@ class BitMasker {
         err += dx - (rad << 1);
       }
     }
-
-    if (this.debugCanvas)
-      this.debugFlush();
+    // if (this.debugCanvas)
+    //   this.debugFlush();
   }
 
   debugFlush() {
 
+    if (!this.debugCanvas) return;
+
     const setPixel = (imgd, x, y, r, g, b) => {
       const w = imgd.width;
+      y = this.h - y - 1;
       imgd.data[(y * this.w + x) * 4] = Math.round(r);
       imgd.data[(y * this.w + x) * 4 + 1] = Math.round(g);
       imgd.data[(y * this.w + x) * 4 + 2] = Math.round(b);
-      imgd.data[(y * this.w + x) * 4 + 3] = 255;
+      imgd.data[(y * this.w + x) * 4 + 3] = 128;
     };
 
     const ctx = this.elm.getContext("2d");
     const imgd = ctx.getImageData(0, 0, this.w, this.h);
     for (let x = 0; x < this.w; ++x) {
       for (let y = 0; y < this.h; ++y) {
-        if (this.getPt(x, y))
+        if (!this.isFree(x, y))
           setPixel(imgd, x, y, 255, 24, 24);
       }
     }
@@ -214,7 +229,7 @@ class BitMasker {
 
   isUsable(x, y) {
     if (x < 0 || x >= this.w || y < 0 || y >= this.h) return false;
-    return !this.getPt(x, y);
+    return this.isFree(x, y);
   }
 }
 
@@ -382,19 +397,19 @@ function newIntegrator(start, startMask, stopMask, config) {
     while (lastCheckedSeed < points.length - 1) {
       lastCheckedSeed += 1;
 
-      let p = points[lastCheckedSeed];
-      let v = normalizedVectorField(p);
+      let pt = points[lastCheckedSeed];
+      let v = normalizedVectorField(pt);
       if (!v) continue;
 
-      // const dist = config.dStart;
-      const dist = config.density(p);
+      const den = Math.min(1, Math.max(0, config.density(pt)));
+      const dist = config.minStartDist + den * (config.maxStartDist - config.minStartDist);
 
       // Check one normal. We just set c = p + n, where n is orthogonal to v.
       // Since v is unit vector we can multiply it by scaler to get to the
       // right point. It is also easy to find normal in 2d: normal to (x, y) is just (-y, x).
       // You can get it by applying 2d rotation matrix.)
-      let cx = p.x - v.y * dist;
-      let cy = p.y + v.x * dist;
+      let cx = pt.x - v.y * dist;
+      let cy = pt.y + v.x * dist;
 
       if (Array.isArray(config.seedArray) && config.seedArray.length > 0) {
         let seed = config.seedArray.shift();
@@ -411,8 +426,8 @@ function newIntegrator(start, startMask, stopMask, config) {
       }
 
       // Check orthogonal coordinates on the other side (o = p - n).
-      let ox = p.x + v.y * dist;
-      let oy = p.y - v.x * dist;
+      let ox = pt.x + v.y * dist;
+      let oy = pt.y - v.x * dist;
       if (startMask.isUsable(ox, oy)) {
         return new Vector(ox, oy);
       }
@@ -451,11 +466,13 @@ function newIntegrator(start, startMask, stopMask, config) {
 
       if (state === DONE) {
         for (const pt of points) {
-          // const dist = config.dStart;
-          const dist = config.density(pt);
-          startMask.circle(pt, dist - 1);
-          stopMask.circle(pt, dist * 0.3); // TODO param
+          const den = Math.min(1, Math.max(0, config.density(pt)));
+          const distStart = config.minStartDist + den * (config.maxStartDist - config.minStartDist);
+          const distEnd = distStart * config.endRatio;
+          startMask.circle(pt, distStart - 1);
+          stopMask.circle(pt, distEnd);
         }
+        startMask.debugFlush();
         return true;
       }
     }

@@ -1,14 +1,14 @@
-import vs from "./vert.glsl";
-import fs from "./frag_mix.glsl";
+import vs from "./shaders/vert.glsl";
+import fs from "./shaders/frag_mix.glsl";
 
 import {init} from "../../src/init.js";
 import GUI from 'lil-gui';
 import * as twgl from "twgl.js";
 import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
-import {FlowLineGenerator, Vec2} from "./app-hatch.js";
-import {SVGGenerator} from "./app-svg.js";
-import {StreamlineGenerator} from "./app-adajo.js";
+import {FlowLineGenerator, Vec2} from "./density-hatch.js";
+import {SVGGenerator} from "./svg.js";
+import {StreamlineGenerator} from "./adaptive-streamlines.js";
 
 const wasmUrl = "flg.wasm";
 const minCellSz = 6;
@@ -432,7 +432,7 @@ function jobardHatch() {
       if (val < 0) val = 0;
       if (val > 1) val = 1;
     }
-    val = 6 + 60 * Math.pow(val, 2);
+    val = Math.pow(val, 0.5);
     return val;
   }
 
@@ -443,8 +443,10 @@ function jobardHatch() {
     density: densityFun,
     width: w,
     height: h,
-    dStart: 10,
-    dStop: 3.1,
+    minStartDist: 7,
+    maxStartDist: 64,
+    endRatio: 0.3,
+    minPointsPerLine: 5,
     timeStep: 2,
     forwardOnly: false,
     onStreamlineAdded: points => flowLines.push(points),
