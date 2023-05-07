@@ -8,6 +8,7 @@ import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
 import {FlowLineGenerator, Vec2} from "./density-hatch.js";
 import {SVGGenerator} from "./svg.js";
+import {Vector} from "./vector.js";
 import {StreamlineGenerator} from "./adaptive-streamlines.js";
 
 const wasmUrl = "flg.wasm";
@@ -22,6 +23,7 @@ let arrays, bufferInfo; // Used to drive simple vertex shader
 let attachments, framebuf; // Used when rendering to texture
 let instance1;
 let wasmDataAddr, wasmTrgAddr, wasmData, wasmTrg;
+let flowLines; // If generated in JS
 let nGenerated = 0;
 
 setRandomGenerator(mulberry32(42));
@@ -290,16 +292,22 @@ function prepareSVGDownload() {
   const gen = new SVGGenerator(w, h, 2 * h, w);
   gen.addLayer("0-black", "#000000");
 
-  const flg = instance1.exports;
-  wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
-  let nAdded = 0;
-  let i = 0;
-  while (nAdded < nGenerated) {
-    const startIx = i;
-    while (wasmTrg[i] != 0xffffffff) i += 2;
-    gen.addWASMPath(0, wasmTrg, startIx, i);
-    i += 2;
-    ++nAdded;
+  if (params.use_wasm_hatcher) {
+    const flg = instance1.exports;
+    wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
+    let nAdded = 0;
+    let i = 0;
+    while (nAdded < nGenerated) {
+      const startIx = i;
+      while (wasmTrg[i] != 0xffffffff) i += 2;
+      gen.addWASMPath(0, wasmTrg, startIx, i);
+      i += 2;
+      ++nAdded;
+    }
+  }
+  else {
+    for (const fl of flowLines)
+      gen.addPointsPath(0, fl);
   }
 
   const d = new Date();
@@ -407,10 +415,10 @@ function jobardHatch() {
     let y = Math.floor(pt.y);
     if (x <= 0 || x >= w - 1 || y <= 0 || y >= h - 1) return null;
     getVec4(wasmData, w * 2, w + x, y, vec);
-    if (vec[1] == 0) return null;
-    let res = new Vec2(vec[2], vec[3]);
+    if (vec[1] == 0) return null; // Distance
+    let res = new Vector(vec[2], vec[3]);
     if (res.length() < 0.00001) return null;
-    res.normalize();
+    res.depth = vec[1];
     return res;
   };
 
@@ -437,15 +445,15 @@ function jobardHatch() {
   }
 
 
-  const flowLines = [];
+  flowLines = [];
   let jstream = new StreamlineGenerator({
-    vectorField: flowFun,
+    field: flowFun,
     density: densityFun,
     width: w,
     height: h,
-    minStartDist: 7,
-    maxStartDist: 64,
-    endRatio: 0.3,
+    minStartDist: 8,
+    maxStartDist: 36,
+    endRatio: 0.4,
     minPointsPerLine: 5,
     timeStep: 2,
     forwardOnly: false,
@@ -531,7 +539,7 @@ function hatch() {
     density: densityFun,
     minCellSize: minCellSz, maxCellSize: maxCellSz, nShades: 12, logGrid: params.log_grid,
   };
-  const flowLines = [];
+  flowLines = [];
   const flgen = new FlowLineGenerator(flopt);
   while (true) {
     const [flPoints, flLength] = flgen.genFlowLine();

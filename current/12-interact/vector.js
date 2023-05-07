@@ -20,12 +20,6 @@ class Vector {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
-  normalize() {
-    const l = this.length();
-    this.x /= l;
-    this.y /= l;
-  }
-
   distanceTo(other) {
     const dx = other.x - this.x;
     const dy = other.y - this.y;

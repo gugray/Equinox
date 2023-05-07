@@ -85,9 +85,9 @@ class StreamlineGenerator {
 
   seedStreamline() {
     let currentStreamLine = this.finishedStreamlineIntegrators[0];
-    let validCandidate = currentStreamLine.getNextValidSeed();
-    if (validCandidate) {
-      this.integrator = newIntegrator(validCandidate, this.startMask, this.stopMask, this.options);
+    let nextSeed = currentStreamLine.getNextValidSeed();
+    if (nextSeed) {
+      this.integrator = newIntegrator(nextSeed, this.startMask, this.stopMask, this.options);
       this.state = STATE_STREAMLINE;
     } else {
       this.finishedStreamlineIntegrators.shift();
@@ -357,16 +357,19 @@ class Cell {
   }
 }
 
-function rk4(point, timeStep, getVelocity) {
-  const k1 = getVelocity(point);
-  if (!k1) return;
-  const k2 = getVelocity(point.add(k1.mulScalar(timeStep * 0.5)));
-  if (!k2) return;
-  const k3 = getVelocity(point.add(k2.mulScalar(timeStep * 0.5)));
-  if (!k3) return;
-  const k4 = getVelocity(point.add(k3.mulScalar(timeStep)));
-  if (!k4) return;
-  const res = k1.mulScalar(timeStep / 6).add(k2.mulScalar(timeStep / 3)).add(k3.mulScalar(timeStep / 3)).add(k4.mulScalar(timeStep / 6));
+function rk4(point, timeStep, readField) {
+  const k1 = readField(point);
+  if (!k1) return null;
+  const k2 = readField(point.add(k1.mulScalar(timeStep * 0.5)));
+  if (!k2) return null;
+  const k3 = readField(point.add(k2.mulScalar(timeStep * 0.5)));
+  if (!k3) return null;
+  const k4 = readField(point.add(k3.mulScalar(timeStep)));
+  if (!k4) return null;
+  const res = k1.mulScalar(timeStep / 6)
+    .add(k2.mulScalar(timeStep / 3))
+    .add(k3.mulScalar(timeStep / 3))
+    .add(k4.mulScalar(timeStep / 6));
   return res;
 }
 
@@ -375,10 +378,14 @@ const BACKWARD = 2;
 const DONE = 3;
 
 function newIntegrator(start, startMask, stopMask, config) {
+
+  // Retrieve depth at our first point
+  const vec = readField(start);
+  if (vec && vec.depth) start.depth = vec.depth;
+
   let points = [start];
-  let pos = start;
+  let currPt = start;
   let state = FORWARD;
-  let candidate = null;
   let lastCheckedSeed = -1;
   let ownGrid = new LookupGrid(config.width, config.height, config.timeStep * 0.9);
 
@@ -398,8 +405,8 @@ function newIntegrator(start, startMask, stopMask, config) {
       lastCheckedSeed += 1;
 
       let pt = points[lastCheckedSeed];
-      let v = normalizedVectorField(pt);
-      if (!v) continue;
+      let dir = readField(pt);
+      if (!dir) continue;
 
       const den = Math.min(1, Math.max(0, config.density(pt)));
       const dist = config.minStartDist + den * (config.maxStartDist - config.minStartDist);
@@ -408,8 +415,8 @@ function newIntegrator(start, startMask, stopMask, config) {
       // Since v is unit vector we can multiply it by scaler to get to the
       // right point. It is also easy to find normal in 2d: normal to (x, y) is just (-y, x).
       // You can get it by applying 2d rotation matrix.)
-      let cx = pt.x - v.y * dist;
-      let cy = pt.y + v.x * dist;
+      let cx = pt.x - dir.y * dist;
+      let cy = pt.y + dir.x * dist;
 
       if (Array.isArray(config.seedArray) && config.seedArray.length > 0) {
         let seed = config.seedArray.shift();
@@ -426,8 +433,8 @@ function newIntegrator(start, startMask, stopMask, config) {
       }
 
       // Check orthogonal coordinates on the other side (o = p - n).
-      let ox = pt.x + v.y * dist;
-      let oy = pt.y - v.x * dist;
+      let ox = pt.x + dir.y * dist;
+      let oy = pt.y - dir.x * dist;
       if (startMask.isUsable(ox, oy)) {
         return new Vector(ox, oy);
       }
@@ -436,28 +443,27 @@ function newIntegrator(start, startMask, stopMask, config) {
 
   function next() {
     while (true) {
-      candidate = null;
       if (state === FORWARD) {
-        let point = growForward();
+        let point = getNextPoint(true);
         if (point) {
           points.push(point);
           ownGrid.occupyCoordinates(point);
-          pos = point;
+          currPt = point;
         } else {
           // Reset position to start, and grow backwards:
           if (config.forwardOnly) {
             state = DONE;
           } else {
-            pos = start;
+            currPt = start;
             state = BACKWARD;
           }
         }
       }
       if (state === BACKWARD) {
-        let point = growBackward();
+        let point = getNextPoint(false);
         if (point) {
           points.unshift(point);
-          pos = point;
+          currPt = point;
           ownGrid.occupyCoordinates(point);
         } else {
           state = DONE;
@@ -478,39 +484,48 @@ function newIntegrator(start, startMask, stopMask, config) {
     }
   }
 
-  function growForward() {
-    let velocity = rk4(pos, config.timeStep, normalizedVectorField);
-    if (!velocity) return; // Hit the singularity.
-    return growByVelocity(pos, velocity);
+  function getNextPoint(forward) {
+
+    let dir = rk4(currPt, config.timeStep, readField);
+    if (!dir) return null;
+    if (!forward) dir = dir.mulScalar(-1);
+    const nextPt = currPt.add(dir);
+
+    // Would get too close to existing streamline
+    if (!stopMask.isUsable(nextPt.x, nextPt.y)) return null;
+    // Would curl back onto ourselves
+    if (ownGrid.hasCloserThan(nextPt.x, nextPt.y, config.timeStep * 0.9)) return null;
+
+    // Get depth at new location. Is there a depth discontinuity?
+    const vec = readField(nextPt);
+    if (vec && vec.depth) nextPt.depth = vec.depth;
+    if (points.length >= 2) {
+      const lastPt = forward ? points[points.length - 1] : points[0];
+      const prevPt = forward ? points[points.length - 2] : points[1];
+      const prevDepthDelta = Math.abs(lastPt.depth - prevPt.depth);
+      const newDepthDelta = Math.abs(nextPt.depth - lastPt.depth);
+      if (newDepthDelta > prevDepthDelta * 3 && newDepthDelta > 1)
+        return null;
+    }
+
+    // This is a good next point.
+    return nextPt;
   }
 
-  function growBackward() {
-    let velocity = rk4(pos, config.timeStep, normalizedVectorField);
-    if (!velocity) return; // Singularity
-    velocity = velocity.mulScalar(-1);
-    return growByVelocity(pos, velocity);
-  }
+  function readField(pt) {
 
-  function growByVelocity(pos, velocity) {
-    candidate = pos.add(velocity);
-    if (!stopMask.isUsable(candidate.x, candidate.y)) return;
-    if (ownGrid.hasCloserThan(candidate.x, candidate.y, config.timeStep * 0.9)) return;
+    const dir = config.field(pt);
 
-    return candidate;
-  }
+    // Singularity, or field not defined here
+    if (!dir) return null;
+    if (Number.isNaN(dir.x) || Number.isNaN(dir.y)) return null;
 
-  function normalizedVectorField(pt) {
-    let p = config.vectorField(pt, points, state === DONE);
-    if (!p) return; // Assume singularity
-    if (Number.isNaN(p.x) || Number.isNaN(p.y)) return; // Not defined. e.g. Math.log(-1);
-
-    let l = p.x * p.x + p.y * p.y;
-
-    if (l === 0) return; // the same, singularity
-    l = Math.sqrt(l);
-
-    // We need normalized field.
-    return new Vector(p.x / l, p.y / l);
+    // Normalize
+    let l = dir.x * dir.x + dir.y * dir.y;
+    if (l == 0) return null;
+    const norm = dir.mulScalar(1 / l);
+    norm.depth = dir.depth;
+    return norm;
   }
 }
 

@@ -14,6 +14,20 @@ class SVGGenerator {
     this.prologue = this.getPrologue();
   }
 
+  addPointsPath(layerIx, points) {
+    if (points.length < 2) return;
+    const x0 = Math.round(points[0].x).toString();
+    const y0 = Math.round(this.h - points[0].y).toString();
+    let pathStr = `M${x0},${y0}`;
+    for (let i = 1; i < points.length; ++i) {
+      const x = Math.round(points[i].x).toString();
+      const y = Math.round(this.h - points[i].y).toString();
+      pathStr += `L${x},${y}`;
+    }
+    this.layers[layerIx].paths.push(pathStr);
+
+  }
+
   addWASMPath(layerIx, buf, startIx, endIx) {
     let i = startIx;
     const x0 = Math.round(buf[i]).toString();
