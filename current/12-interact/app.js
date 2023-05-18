@@ -6,10 +6,17 @@ import GUI from 'lil-gui';
 import * as twgl from "twgl.js";
 import {SimplexNoise} from "../../src/simplex-noise.js";
 import {rand, setRandomGenerator, mulberry32} from "../../src/random.js";
-import {FlowLineGenerator, Vec2} from "./density-hatch.js";
+import {EQNFlowLineGenerator, Vec2} from "./eqn-hatch.js";
 import {SVGGenerator} from "./svg.js";
-import {Vector} from "./vector.js";
-import {StreamlineGenerator} from "./adaptive-streamlines.js";
+import {createStreamlineGenerator, Vector} from "../../../adaptive-streamlines/src/index.js";
+
+// Next:
+// XX Remove LookupGrid for self-intersection too (but check perf...)
+// XX Consolidate with Vec2
+// -- Handle missing depth
+// OK Promise
+// OK Make NPM package?
+// -- Hatch a photo (maybe in Sketches)
 
 const wasmUrl = "flg.wasm";
 const minCellSz = 6;
@@ -23,7 +30,7 @@ let arrays, bufferInfo; // Used to drive simple vertex shader
 let attachments, framebuf; // Used when rendering to texture
 let instance1;
 let wasmDataAddr, wasmTrgAddr, wasmData, wasmTrg;
-let flowLines; // If generated in JS
+let slGen, flowLines; // If generated in JS
 let nGenerated = 0;
 
 setRandomGenerator(mulberry32(42));
@@ -51,7 +58,7 @@ const params = {
   rotate_field: true,
   noise_gain: 0.001,
   log_grid: true,
-  use_wasm_hatcher: true,
+  hatcher: "adasl-js",
   log_perf: false,
 };
 
@@ -99,7 +106,7 @@ function setupControls() {
   fHatching.add(params, "rotate_field").onFinishChange(update);
   fHatching.add(params, "noise_gain", 0, 0.01).onFinishChange(update);
   fHatching.add(params, "log_grid").onFinishChange(update);
-  fHatching.add(params, "use_wasm_hatcher").onFinishChange(update);
+  fHatching.add(params, "hatcher", ["adasl-js", "eqn-js", "eqn-zig"]).onFinishChange(update);
   const fMisc = gui.addFolder("Misc");
   fMisc.add(params, "log_perf").onFinishChange(update);
   fMisc.add(handler, "save");
@@ -155,6 +162,11 @@ function setupControls() {
   }
 
   function update() {
+    if (slGen != null) {
+      slGen.cancel();
+      slGen = null;
+      flowLines = null;
+    }
     if (params.animate) return;
     requestAnimationFrame(render);
   }
@@ -258,9 +270,11 @@ function render(time) {
     gl.readPixels(0, 0, w * 2, h, gl.RGBA, gl.FLOAT, wasmData);
 
     postprocessFlowfield(params.noise_gain, params.rotate_field);
-    if (params.use_wasm_hatcher) zigHatch();
-    // else hatch();
-    else jobardHatch();
+
+    flowLines = null;
+    if (params.hatcher == "eqn-zig") zigHatch();
+    else if (params.hatcher == "eqn-js") eqnHatch();
+    else if (params.hatcher == "adasl-js") slHatch();
   }
   if (params.animate) requestAnimationFrame(render);
 }
@@ -292,7 +306,7 @@ function prepareSVGDownload() {
   const gen = new SVGGenerator(w, h, 2 * h, w);
   gen.addLayer("0-black", "#000000");
 
-  if (params.use_wasm_hatcher) {
+  if (flowLines == null) {
     const flg = instance1.exports;
     wasmTrg = new Uint32Array(flg.memory.buffer, wasmTrgAddr, 10_000_000);
     let nAdded = 0;
@@ -406,7 +420,7 @@ function zigHatch() {
 
 }
 
-function jobardHatch() {
+async function slHatch() {
 
   const vec = [0, 0, 0, 0];
 
@@ -444,37 +458,9 @@ function jobardHatch() {
     return val;
   }
 
-
   flowLines = [];
-  let jstream = new StreamlineGenerator({
-    field: flowFun,
-    density: densityFun,
-    width: w,
-    height: h,
-    minStartDist: 8,
-    maxStartDist: 36,
-    endRatio: 0.4,
-    minPointsPerLine: 5,
-    timeStep: 2,
-    forwardOnly: false,
-    onStreamlineAdded: points => flowLines.push(points),
-  });
-  jstream.run();
-  waitForJobard();
 
-  function waitForJobard() {
-    if (jstream.running) {
-      setTimeout(waitForJobard, 50);
-    }
-    else {
-      status(flowLines.length);
-      if (params.log_perf) {
-        let elapsed = endTime - startTime;
-        console.log("Hatching: " + elapsed + " msec");
-        console.log("# flowlines: " + flowLines.length);
-      }
-    }
-
+  function renderLines() {
     ctx2D.fillStyle = "white";
     ctx2D.fillRect(0, 0, w, h);
     ctx2D.fill();
@@ -488,11 +474,39 @@ function jobardHatch() {
       }
     }
     ctx2D.stroke();
+  }
 
+  function lineAdded(points) {
+    flowLines.push(points);
+    if ((flowLines.length % 32) == 0) renderLines();
+  }
+
+  if (slGen != null) slGen.cancel();
+  slGen = createStreamlineGenerator({
+    field: flowFun,
+    density: densityFun,
+    width: w,
+    height: h,
+    minStartDist: 8,
+    maxStartDist: 36,
+    endRatio: 0.4,
+    minPointsPerLine: 5,
+    stepLength: 2,
+    onStreamlineAdded: lineAdded,
+  });
+
+  await slGen.runAsync();
+  renderLines();
+  status(flowLines.length);
+
+  if (params.log_perf) {
+    let elapsed = endTime - startTime;
+    console.log("Hatching: " + elapsed + " msec");
+    console.log("# flowlines: " + flowLines.length);
   }
 }
 
-function hatch() {
+function eqnHatch() {
 
   const vec = [0, 0, 0, 0];
 
@@ -540,7 +554,7 @@ function hatch() {
     minCellSize: minCellSz, maxCellSize: maxCellSz, nShades: 12, logGrid: params.log_grid,
   };
   flowLines = [];
-  const flgen = new FlowLineGenerator(flopt);
+  const flgen = new EQNFlowLineGenerator(flopt);
   while (true) {
     const [flPoints, flLength] = flgen.genFlowLine();
     if (!flPoints) break;

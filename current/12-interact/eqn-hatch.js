@@ -52,7 +52,7 @@ function shuffle(arr) {
 }
 
 
-class FlowLineGenerator {
+class EQNFlowLineGenerator {
 
   constructor({
                 width, height, field, stepSize, maxLength,
@@ -271,4 +271,4 @@ class OccupancyGrid {
   }
 }
 
-export {FlowLineGenerator, Vec2}
+export {EQNFlowLineGenerator, Vec2}

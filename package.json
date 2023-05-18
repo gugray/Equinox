@@ -8,13 +8,14 @@
     "email": "gabor.reads.this@gmail.com"
   },
   "dependencies": {
-    "twgl.js": "^5.3.1",
-    "lil-gui": "^0.18.1"
+    "adaptive-streamlines": "^0.0.1",
+    "lil-gui": "^0.18.1",
+    "twgl.js": "^5.3.1"
   },
   "devDependencies": {
     "esbuild": "^0.14.21",
     "livereload": "^0.9.3",
-    "static-server": "^2.2.1",
-    "md5": "^2.3.0"
+    "md5": "^2.3.0",
+    "static-server": "^2.2.1"
   }
 }

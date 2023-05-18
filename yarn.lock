@@ -7,6 +7,11 @@
   resolved "https://registry.yarnpkg.com/@esbuild/linux-loong64/-/linux-loong64-0.14.54.tgz#de2a4be678bd4d0d1ffbb86e6de779cde5999028"
   integrity sha512-bZBrLAIX1kpWelV0XemxBZllyRmM6vgFQQG2GdNb+r3Fkp0FOh1NJSvekXDs7jq70k4euu1cryLMfU+mTXlEpw==
 
+adaptive-streamlines@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/adaptive-streamlines/-/adaptive-streamlines-0.0.1.tgz#9b93396407113b4cb46c58ee1a672d11a627768c"
+  integrity sha512-PuOyadzJ6MQUSIHa9Mus3t16z6CDl8rgpS+yGei39GbWR+zfSW6jOXaeQZdqiL0FWku3a9FN3928COQx1o1ApQ==
+
 ansi-regex@^0.2.0, ansi-regex@^0.2.1:
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/ansi-regex/-/ansi-regex-0.2.1.tgz#0d8e946967a3d8143f93e24e298525fc1b2235f9"
