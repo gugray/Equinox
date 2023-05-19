@@ -11,7 +11,7 @@ out vec4 outColor;
 
 void main() {
     vec4 prevState = texelFetch(txPrev, ivec2(gl_FragCoord.xy), 0);
-    outColor.xy = prevState.xy + vec2(0.5);
+    outColor.xy = prevState.xy + vec2(2.5);
     outColor.xy = mod(outColor.xy, resolution);
 
     float rndReset = random(length(prevState));
