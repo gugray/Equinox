@@ -2,16 +2,8 @@ vec2 opU(vec2 d1, vec2 d2) {
     return (d1.x<d2.x) ? d1 : d2;
 }
 
-
 float onion(float d, float h) {
     return abs(d)-h;
-}
-
-vec3 hash31(float p)// https://www.shadertoy.com/view/4djSRW Hash without Sine by Dave_Hoskins
-{
-    vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xxy+p3.yzz)*p3.zyx);
 }
 
 float sdSphere(vec3 p, float s) {
@@ -45,12 +37,6 @@ float sdBox(vec3 p, vec3 dim) {
 float sdCappedCylinder(vec3 p, vec2 h) {
     vec2 d = abs(vec2(length(p.xz), p.y)) - h;
     return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
-}
-
-float sdBox(in vec2 p, in vec2 b)
-{
-    vec2 d = abs(p)-b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
 float sdCircle(vec2 p, float r)

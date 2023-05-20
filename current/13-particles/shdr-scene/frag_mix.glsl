@@ -7,7 +7,6 @@ precision highp float;
 out vec4 outColor;
 
 uniform vec2 resolution;
-uniform float time;
 uniform float eyeFOV;
 uniform float eyeAzimuth;
 uniform float eyeAltitude;
@@ -19,10 +18,11 @@ uniform float light2Strength;
 uniform float ambientLightStrength;
 uniform bool curvatureLight;
 
-#include "consts.glsl"
-#include "geo.glsl"
-#include "sdf.glsl"
-#include "scene.glsl"
+#include "../shdr-share/consts.glsl"
+#include "../shdr-share/geo.glsl"
+#include "../shdr-share/sdf.glsl"
+#include "../shdr-share/utils.glsl"
+#include "../gist.glsl"
 #include "march.glsl"
 #include "light.glsl"
 

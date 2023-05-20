@@ -1,14 +1,14 @@
 #version 300 es
 precision highp float;
 
-#include "utils.glsl"
+#include "../shdr-share/consts.glsl"
+#include "../shdr-share/utils.glsl"
 
 uniform float szParticleState;
 uniform sampler2D txPrev;
 uniform sampler2D txScene;
 uniform vec2 sceneRes;
 uniform vec2 trgRes;
-uniform float time;
 out vec4 outColor;
 
 vec4 flow(vec4 prevState) {
@@ -20,7 +20,6 @@ vec4 flow(vec4 prevState) {
 
 void main() {
     vec4 prevState = texelFetch(txPrev, ivec2(gl_FragCoord.xy), 0);
-
     outColor = prevState;
 
     int delta = 2;
@@ -42,14 +41,23 @@ void main() {
     float gradY = fieldAbove.x - fieldBelow.x;
     vec2 grad = vec2(gradX, gradY);
 
+    vec2 p = prevState.xy / trgRes;
+    vec2 uv = p * vec2(trgRes.x / trgRes.y, 1.0) * 5.;
+    float nofsX = snoise(vec3(uv, time * 0.0001));
+    float nofsY = snoise(vec3(uv, 100. + time * 0.0001));
+
     if (length(grad) > 0. && field.y != 0.) {
         vec2 dir = normalize(grad);
         dir = vec2(-dir.y, dir.x);
         outColor.xy += 2. * dir * pow(field.z, 0.5);
+        outColor.xy += vec2(nofsX, nofsY) * 0.8;
+        outColor.xy = mod(outColor.xy, trgRes);
         outColor.zw = field.zw; // Light; ID
     }
     else {
-        outColor = flow(prevState);
+        //outColor = flow(prevState);
+        outColor.xy += vec2(nofsX, nofsY) * 2.;
+        outColor.xy = mod(outColor.xy, trgRes);
         outColor.zw = vec2(0.);
     }
 

@@ -28,7 +28,7 @@ let progiParticleRender;                  // Render particles
 let progiOutputDraw;                      // Copies/blends texture to other texture, or to screen
 
 const params = {
-  animate: true,
+  animate: false,
   rotate: true,
   raw_scene: false,
   curvature_light: false,
