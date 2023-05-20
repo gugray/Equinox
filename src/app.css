@@ -14,3 +14,23 @@ footer {
 }
 footer div { float: right; color: #808080; margin-left: 10px; }
 footer a#download { display: none; float: right; margin-left: 10px; color: hsl(240, 57%, 62%); text-decoration: none; }
+
+#shaderEditorBox {
+  display: none; position: fixed; top: 32px; left: 32px;
+  background-color: transparent; opacity: 0.3;
+  width: 800px; height: calc(100% - 64px);
+}
+.editorBg {
+  position: absolute; width: 100%; height: 100%;
+  background-color: black; opacity: 0;
+}
+#shaderEditorBox.focused { opacity: 1; }
+#shaderEditorBox.focused .editorBg {  opacity: 0.3; }
+#shaderEditorBox .CodeMirror { height: 100%; }
+#shaderEditorBox .CodeMirror,
+#shaderEditorBox .CodeMirror-gutters {
+  background-color: transparent;
+}
+.CodeMirror-vscrollbar {
+  visibility: hidden;
+}

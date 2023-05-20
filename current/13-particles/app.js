@@ -4,14 +4,23 @@ import sParticleRenderVert from "shdr-hatch/particle-render-vert.glsl";
 import sParticleRenderFrag from "shdr-hatch/particle-render-frag.glsl";
 import sParticleUpdateFrag from "shdr-hatch/particle-update-frag.glsl";
 import sOutputDrawFrag from "shdr-hatch/output-draw-frag.glsl";
+import sGist from "./gist.glsl";
 
 import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
 import GUI from 'lil-gui';
+import {Editor} from "./editor.js";
+
+// TODO:
+// -- Add initial shader to editor
+// -- Recompile programs on Cmd+Enter; syntax flash
+// -- Re-init on full screen mode
+
 
 const nParticles = 8096 * 4;
 
 let gui;
+let edShader;
 let status = () => {};
 let renderTimes = [], frameIx = 0;
 let webGLCanvas, gl, w, h;
@@ -28,7 +37,7 @@ let progiParticleRender;                  // Render particles
 let progiOutputDraw;                      // Copies/blends texture to other texture, or to screen
 
 const params = {
-  animate: false,
+  animate: true,
   rotate: true,
   raw_scene: false,
   curvature_light: false,
@@ -51,7 +60,7 @@ const params = {
 
 // Textures
 // [sqrtnumpart]  particle state
-// [imgsize x 2]  scene render; direction/darkness/depth
+// [imgsize]      scene render: dlum; dist; light; id
 // [imgsize]      particle render
 
 document.body.classList.add("full");
@@ -68,6 +77,8 @@ function setup() {
   frameIx = 0;
   // setupStatus();
   document.getElementsByTagName("footer")[0].style.display = "none";
+
+  setupEditor();
 
   // This sketch doesn't use 2D canvas
   document.getElementById("canv2d").style.display = "none";
@@ -170,6 +181,12 @@ function setup() {
   requestAnimationFrame(frame);
 }
 
+function setupEditor() {
+  const elmShaderEditorBox = document.getElementById("shaderEditorBox");
+  elmShaderEditorBox.style.display = "block";
+  edShader = new Editor(elmShaderEditorBox);
+  edShader.cm.doc.setValue(sGist);
+}
 
 function setupStatus() {
   const elm = document.getElementById("update");

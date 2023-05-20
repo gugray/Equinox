@@ -1,5 +1,3 @@
-
-
 vec2 map(vec3 p) {
 
     vec2 res = vec2(1e10, 0.);
