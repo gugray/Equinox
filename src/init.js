@@ -1,7 +1,7 @@
 const canvas3D = document.getElementById("canv3d");
 const canvas2D = document.getElementById("canv2d");
 const devicePixelRatio = window.devicePixelRatio || 1;
-let canvasWidth, canvasHeight, aspect;
+let canvasWidth, canvasHeight;
 
 function init(prog, fullScreen = true) {
 
@@ -26,7 +26,6 @@ function moveCanvasD() {
 function initFixed(canvas) {
   let elmWidth = 740;
   let elmHeight = 525;
-  aspect = elmWidth / elmHeight;
   canvas.style.width = elmWidth + "px";
   canvas.style.height = elmHeight + "px";
   canvas.style.display = "block";
@@ -42,7 +41,6 @@ function initFullScreen(canvas) {
   // Size, position and show canvas element
   let elmWidth = window.innerWidth;
   let elmHeight = window.innerHeight;
-  aspect = elmWidth / elmHeight;
   canvas.style.width = elmWidth + "px";
   canvas.style.height = elmHeight + "px";
   canvas.style.left = 0;

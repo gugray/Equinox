@@ -20,12 +20,15 @@ footer a#download { display: none; float: right; margin-left: 10px; color: hsl(2
   background-color: transparent; opacity: 0.3;
   width: 800px; height: calc(100% - 64px);
 }
-.editorBg {
+#editorBg {
   position: absolute; width: 100%; height: 100%;
   background-color: black; opacity: 0;
+  transition: background-color ease-out 1.5s;
 }
+#editorBg.error { background-color: red; transition: none; }
+#editorBg.apply { background-color: #aaa; transition: none; }
 #shaderEditorBox.focused { opacity: 1; }
-#shaderEditorBox.focused .editorBg {  opacity: 0.3; }
+#shaderEditorBox.focused #editorBg {  opacity: 0.3; }
 #shaderEditorBox .CodeMirror { height: 100%; }
 #shaderEditorBox .CodeMirror,
 #shaderEditorBox .CodeMirror-gutters {

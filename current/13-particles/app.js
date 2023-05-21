@@ -1,5 +1,5 @@
 import sSweepVert from "shdr-hatch/sweep-vert.glsl";
-import sSceneFrag from "shdr-scene/frag_mix.glsl";
+import sSceneFrag from "shdr-scene/scene-frag.glsl";
 import sParticleRenderVert from "shdr-hatch/particle-render-vert.glsl";
 import sParticleRenderFrag from "shdr-hatch/particle-render-frag.glsl";
 import sParticleUpdateFrag from "shdr-hatch/particle-update-frag.glsl";
@@ -8,23 +8,24 @@ import sGist from "./gist.glsl";
 
 import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
-import GUI from 'lil-gui';
 import {Editor} from "./editor.js";
 
 // TODO:
-// -- Add initial shader to editor
-// -- Recompile programs on Cmd+Enter; syntax flash
-// -- Re-init on full screen mode
+// OK Add initial gist to editor
+// OK Recompile programs on Cmd+Enter; syntax flash
+// OK Re-init on full screen mode
+// OK Rename scene shaders
+// OK Add fragment update to gist
+// -- Save all non-erroring gist versions in localStorage; save
+// -- Only one light
 
 
 const nParticles = 8096 * 4;
 
-let gui;
-let edShader;
-let status = () => {};
-let renderTimes = [], frameIx = 0;
+let editor;
 let webGLCanvas, gl, w, h;
 let sdfW = 480, sdfH;
+let newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
 let particleArrays, particleBufferInfo;   // Used to drive paricle state compute shader, and particle renderer
 let szParticleState;                      // Size of (square-shaped) particle state textures
@@ -68,25 +69,14 @@ init(setup, true);
 
 function setup() {
 
-  webGLCanvas = document.getElementById("canv3d");
-  w = webGLCanvas.width;
-  h = webGLCanvas.height;
-  sdfH = Math.round(sdfW * h / w);
-
-  for (let i = 0; i < 60; ++i) renderTimes.push(0);
-  frameIx = 0;
-  // setupStatus();
-  document.getElementsByTagName("footer")[0].style.display = "none";
-
   setupEditor();
 
-  // This sketch doesn't use 2D canvas
+  // This sketch doesn't use footer, or 2D canvas
+  document.getElementsByTagName("footer")[0].style.display = "none";
   document.getElementById("canv2d").style.display = "none";
 
-  // LIL-GUI and mouse
-  // setupControls();
-
   // 3D WebGL canvas, and twgl
+  webGLCanvas = document.getElementById("canv3d");
   gl = webGLCanvas.getContext("webgl2");
   twgl.addExtensionsToContext(gl);
 
@@ -104,24 +94,12 @@ function setup() {
     particleArrays.index.data.push(i);
   particleBufferInfo = twgl.createBufferInfoFromArrays(gl, particleArrays);
 
-  // SDF scene renderer's output texture
-  const dtScene = new Float32Array(sdfW * sdfH * 4);
-  dtScene.fill(0);
-  txScene = twgl.createTexture(gl, {
-    internalFormat: gl.RGBA32F,
-    format: gl.RGBA,
-    type: gl.FLOAT,
-    width: sdfW,
-    height: sdfH,
-    src: dtScene,
-  });
-
   // Particle state data textures
   szParticleState = Math.ceil(Math.sqrt(nParticles));
   const dtParticleState0 = new Float32Array(szParticleState * szParticleState * 4);
   for (let i = 0; i < nParticles; ++i) {
-    const x = w * Math.random();
-    const y = h * Math.random();
+    const x = webGLCanvas.width * Math.random();
+    const y = webGLCanvas.height * Math.random();
     dtParticleState0[i * 4] = x;
     dtParticleState0[i * 4 + 1] = y;
   }
@@ -144,8 +122,50 @@ function setup() {
     src: dtParticleState1,
   });
 
+  initRenderRextures();
+  initPrograms();
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+    initRenderRextures()
+  });
+
+  requestAnimationFrame(frame);
+}
+
+function resizeCanvas() {
+  let elmWidth = window.innerWidth;
+  let elmHeight = window.innerHeight;
+  webGLCanvas.style.width = elmWidth + "px";
+  webGLCanvas.style.height = elmHeight + "px";
+  w = webGLCanvas.width = elmWidth * devicePixelRatio;
+  h = webGLCanvas.height = elmHeight * devicePixelRatio;
+}
+
+function initRenderRextures() {
+
+  // Current canvas size
+  w = webGLCanvas.width;
+  h = webGLCanvas.height;
+  sdfH = Math.round(sdfW * h / w);
+
+  // SDF scene renderer's output texture
+  const dtScene = new Float32Array(sdfW * sdfH * 4);
+  dtScene.fill(0);
+  if (txScene) gl.deleteTexture(txScene);
+  txScene = twgl.createTexture(gl, {
+    internalFormat: gl.RGBA32F,
+    format: gl.RGBA,
+    type: gl.FLOAT,
+    width: sdfW,
+    height: sdfH,
+    src: dtScene,
+  });
+
+  // First pingpong output texture
   const dtRender0 = new Uint8Array(w * h * 4);
   dtRender0.fill(0);
+  if (txOutput0) gl.deleteTexture(txOutput0);
   txOutput0 = twgl.createTexture(gl, {
     internalFormat: gl.RGBA,
     format: gl.RGBA,
@@ -155,8 +175,10 @@ function setup() {
     src: dtRender0,
   });
 
+  // Other pingpong output texture
   const dtRender1 = new Uint8Array(w * h * 4);
   dtRender1.fill(0);
+  if (txOutput1) gl.deleteTexture(txOutput1);
   txOutput1 = twgl.createTexture(gl, {
     internalFormat: gl.RGBA,
     format: gl.RGBA,
@@ -165,49 +187,63 @@ function setup() {
     height: h,
     src: dtRender1,
   });
+}
 
-  // Program: render scene
-  progiScene = twgl.createProgramInfo(gl, [sSweepVert, sSceneFrag]);
+function initPrograms() {
 
-  // Program: update particles
-  progiParticleUpdate = twgl.createProgramInfo(gl, [sSweepVert, sParticleUpdateFrag]);
+  const firstInit = progiScene ? false : true;
 
-  // Program: render particles
-  progiParticleRender = twgl.createProgramInfo(gl, [sParticleRenderVert, sParticleRenderFrag]);
+  // The "gist" of the shader programs that's live-edited
+  let gist = sGist;
+  if (editor) gist = editor.cm.doc.getValue();
+  const ph = "// GIST.GLSL"; // Placeholder text
 
-  // Program: draw output
-  progiOutputDraw = twgl.createProgramInfo(gl, [sSweepVert, sOutputDrawFrag]);
+  const del = pi => { if (pi && pi.program) gl.deleteProgram(pi.program); }
+  const recreate = (v, f) => twgl.createProgramInfo(gl, [v.replace(ph, gist), f.replace(ph, gist)]);
 
-  requestAnimationFrame(frame);
+  // Renders SDF scene
+  const npScene = recreate(sSweepVert, sSceneFrag);
+
+  // Updates particles
+  const npParticleUpdate = recreate(sSweepVert, sParticleUpdateFrag);
+
+  // Renders particles
+  const npParticleRender = recreate(sParticleRenderVert, sParticleRenderFrag);
+
+  // Draw to an output texture
+  const npOutputDraw = recreate(sSweepVert, sOutputDrawFrag);
+
+  const elmBg = document.getElementById("editorBg");
+  if (!npScene || !npParticleUpdate || !npParticleRender || !npOutputDraw) {
+    elmBg.classList.add("error");
+    setTimeout(() => elmBg.classList.remove("error"), 200);
+    return;
+  }
+
+  del(progiScene);
+  progiScene = npScene;
+  del(progiParticleUpdate);
+  progiParticleUpdate = npParticleUpdate;
+  del(progiParticleRender);
+  progiParticleRender = npParticleRender;
+  del(progiOutputDraw);
+  progiOutputDraw = npOutputDraw;
+
+  if (!firstInit) {
+    elmBg.classList.add("apply");
+    setTimeout(() => elmBg.classList.remove("apply"), 200);
+  }
+
+  newSeq = true;
 }
 
 function setupEditor() {
   const elmShaderEditorBox = document.getElementById("shaderEditorBox");
   elmShaderEditorBox.style.display = "block";
-  edShader = new Editor(elmShaderEditorBox);
-  edShader.cm.doc.setValue(sGist);
-}
-
-function setupStatus() {
-  const elm = document.getElementById("update");
-  if (!elm) return;
-  status = txt => elm.innerText = txt;
-}
-
-let lastMsec = -1;
-function updateRenderTimes(msecNow, msecRender) {
-  if (lastMsec != -1) {
-    renderTimes[frameIx] = msecNow - lastMsec;
-    frameIx = (frameIx + 1) % renderTimes.length;
-    if (frameIx == 0) {
-      let val = 0;
-      renderTimes.forEach(x => val += x);
-      val /= renderTimes.length;
-      val = 1000 / val;
-      status("FPS: " + val.toFixed(1));
-    }
-  }
-  lastMsec = msecNow;
+  editor = new Editor(elmShaderEditorBox);
+  editor.cm.doc.setValue(sGist);
+  editor.onSubmit = () => initPrograms();
+  editor.onFullScreen = () => document.documentElement.requestFullscreen();
 }
 
 const angleToVec = (azimuth, altitude) => {
@@ -219,7 +255,11 @@ const angleToVec = (azimuth, altitude) => {
 
 function frame(time) {
 
-  const startTime = performance.now();
+  if (newSeq) {
+    seqTimeStart = time;
+    newSeq = false;
+  }
+  const seqTime = time - seqTimeStart;
 
   // Render SDF scene
   const unisSDF = {
@@ -267,7 +307,6 @@ function frame(time) {
 
   // Update particle states: always tx0 => tx1, then swap
   const unisParticleUpdate = {
-    szParticleState: szParticleState,
     txPrev: txParticleState0,
     txScene: txScene,
     sceneRes: [sdfW, sdfH],
@@ -319,8 +358,6 @@ function frame(time) {
 
   // Swap output textures: current image becomes fadable background for next
   [txOutput0, txOutput1] = [txOutput1, txOutput0];
-
-  updateRenderTimes(time, performance.now() - startTime);
 
   if (params.animate) requestAnimationFrame(frame);
 }

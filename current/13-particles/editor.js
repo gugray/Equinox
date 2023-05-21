@@ -21,7 +21,11 @@ import 'codemirror/keymap/sublime';
 
 class Editor {
   constructor(parent) {
+
     this.parent = parent;
+    this.onSubmit = null;
+    this.onFullScreen = null;
+
     this.cm = CodeMirror(parent, {
       value: "void hello() {}",
       viewportMargin: Infinity,
@@ -30,7 +34,6 @@ class Editor {
       mode: 'x-shader/x-fragment',
       keyMap: 'sublime',
       autoCloseBrackets: true,
-      extraKeys: { 'Ctrl-Space': 'autocomplete' },
       showCursorWhenSelecting: true,
       theme: "monokai",
       dragDrop: false,
@@ -40,6 +43,12 @@ class Editor {
       gutters: ["CodeMirror-linenumbers"],
       lineWrapping: true,
       autofocus: true,
+      extraKeys: {
+        "Ctrl-Enter": () => this.onSubmit && this.onSubmit(),
+        "Cmd-Enter": () => this.onSubmit && this.onSubmit(),
+        "Shift-Ctrl-Enter": () => this.onFullScreen && this.onFullScreen(),
+        "Shift-Cmd-Enter": () => this.onFullScreen && this.onFullScreen(),
+      },
     });
 
     this.cm.on("change", (e) => {

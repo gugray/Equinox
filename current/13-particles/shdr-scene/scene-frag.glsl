@@ -22,7 +22,7 @@ uniform bool curvatureLight;
 #include "../shdr-share/geo.glsl"
 #include "../shdr-share/sdf.glsl"
 #include "../shdr-share/utils.glsl"
-#include "../gist.glsl"
+// GIST.GLSL
 #include "march.glsl"
 #include "light.glsl"
 
