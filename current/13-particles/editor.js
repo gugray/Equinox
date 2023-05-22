@@ -44,9 +44,7 @@ class Editor {
       lineWrapping: true,
       autofocus: true,
       extraKeys: {
-        "Ctrl-Enter": () => this.onSubmit && this.onSubmit(),
         "Cmd-Enter": () => this.onSubmit && this.onSubmit(),
-        "Shift-Ctrl-Enter": () => this.onFullScreen && this.onFullScreen(),
         "Shift-Cmd-Enter": () => this.onFullScreen && this.onFullScreen(),
       },
     });

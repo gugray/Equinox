@@ -8,6 +8,7 @@ import sGist from "./gist.glsl";
 
 import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
+import * as H from "./history.js";
 import {Editor} from "./editor.js";
 
 // TODO:
@@ -16,7 +17,8 @@ import {Editor} from "./editor.js";
 // OK Re-init on full screen mode
 // OK Rename scene shaders
 // OK Add fragment update to gist
-// -- Save all non-erroring gist versions in localStorage; save
+// OK Save all non-erroring gist versions in localStorage; save
+// -- Serve without watch
 // -- Only one light
 
 
@@ -25,7 +27,7 @@ const nParticles = 8096 * 4;
 let editor;
 let webGLCanvas, gl, w, h;
 let sdfW = 480, sdfH;
-let newSeq, seqTimeStart;
+let seqId, newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
 let particleArrays, particleBufferInfo;   // Used to drive paricle state compute shader, and particle renderer
 let szParticleState;                      // Size of (square-shaped) particle state textures
@@ -123,6 +125,7 @@ function setup() {
   });
 
   initRenderRextures();
+  initGistSeq();
   initPrograms();
 
   window.addEventListener("resize", () => {
@@ -230,8 +233,12 @@ function initPrograms() {
   progiOutputDraw = npOutputDraw;
 
   if (!firstInit) {
+    // Flash
     elmBg.classList.add("apply");
     setTimeout(() => elmBg.classList.remove("apply"), 200);
+    // Store this revision
+    if (H.storeGist(editor.cm.getValue(), seqId))
+      ++seqId;
   }
 
   newSeq = true;
@@ -241,9 +248,33 @@ function setupEditor() {
   const elmShaderEditorBox = document.getElementById("shaderEditorBox");
   elmShaderEditorBox.style.display = "block";
   editor = new Editor(elmShaderEditorBox);
-  editor.cm.doc.setValue(sGist);
   editor.onSubmit = () => initPrograms();
   editor.onFullScreen = () => document.documentElement.requestFullscreen();
+
+  document.body.addEventListener("keydown", e => {
+    let handled = false;
+    if (e.metaKey && e.key == "e") {
+      if (editor.cm.hasFocus()) editor.cm.display.input.blur();
+      else editor.cm.display.input.focus();
+      handled = true;
+    }
+    if (e.metaKey && e.key == "s") {
+      H.saveHistory(e.shiftKey);
+      if (e.shiftKey) seqId = 0;
+      handled = true;
+    }
+    if (handled) {
+      e.preventDefault();
+      return false;
+    }
+  });
+}
+
+function initGistSeq() {
+  let lastGist;
+  [seqId, lastGist] = H.getLatestGist();
+  if (lastGist) editor.cm.setValue(lastGist);
+  else editor.cm.setValue(sGist);
 }
 
 const angleToVec = (azimuth, altitude) => {

@@ -10,6 +10,7 @@
   "dependencies": {
     "adaptive-streamlines": "^0.0.1",
     "codemirror": "^5.65.13",
+    "jszip": "^3.10.1",
     "lil-gui": "^0.18.1",
     "twgl.js": "^5.3.1"
   },
