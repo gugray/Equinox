@@ -3,6 +3,23 @@ vec2 map(vec3 p) {
     vec2 res = vec2(1e10, 0.);
     float t = time * 0.3 + 500.;
 
+    {
+        // Base
+        vec3 q = p;
+        float radius = 5.;
+        vec3 rodDim = vec3(3.0, 0.3, 0.3);
+        q -= vec3(0.0, -4., 0.);
+        q = doRotX(q, -PI * 0.5);
+
+        // q = doRotZ(q, time * 0.0001);
+        // float index = opCircRep(q.xy, 2.);
+        // q.x -= radius;
+        // q = doRotX(q, PI * .25);
+
+        float d = sdBox(q, rodDim);
+        res = opU(res, vec2(d, 2.));
+    }
+
     // Octahedron
     {
         vec3 q = p;

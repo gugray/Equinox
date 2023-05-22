@@ -34,6 +34,8 @@ footer a#download { display: none; float: right; margin-left: 10px; color: hsl(2
 #shaderEditorBox .CodeMirror-gutters {
   background-color: transparent;
 }
-.CodeMirror-vscrollbar {
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar,
+.CodeMirror-scrollbar-filler {
   visibility: hidden;
 }

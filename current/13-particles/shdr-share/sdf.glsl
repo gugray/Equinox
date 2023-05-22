@@ -77,3 +77,15 @@ vec3 opRepLimFlip(in vec3 p, in float s, in vec3 lima, in vec3 limb)
 
     return o;
 }
+
+// Circular repetition
+// From https://www.shadertoy.com/view/3l3Bzn
+float opCircRep(inout vec2 p, float count) {
+    float an = 2.*PI/count;
+    float a = atan(p.y, p.x)+an/2.;
+    float c = floor(a/an);
+    c = mix(c, abs(c), step(count*.5, abs(c)));
+    a = mod(a, an)-an/2.;
+    p.xy = vec2(cos(a), sin(a))*length(p);
+    return c;
+}

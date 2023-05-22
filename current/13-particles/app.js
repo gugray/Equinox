@@ -20,6 +20,7 @@ import {Editor} from "./editor.js";
 // OK Save all non-erroring gist versions in localStorage; save
 // -- Serve without watch
 // -- Only one light
+// -- Add light/cam params to gist
 
 
 const nParticles = 8096 * 4;
@@ -46,9 +47,9 @@ const params = {
   curvature_light: false,
   view: {
     fov: 45,
-    azimuth: 0,
-    altitude: 30,
-    distance: 7,
+    azimuth: 0.0001,
+    altitude: 0,
+    distance: 20,
   },
   lights: {
     l1_azimuth: -75,

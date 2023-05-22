@@ -16,6 +16,11 @@ mat4 rotateX(float theta) {
     );
 }
 
+vec3 doRotX(vec3 p, float theta) {
+    mat4 trans = rotateX(theta);
+    return (trans * vec4(p, 1.)).xyz;
+}
+
 // Rotation matrix around the Y axis.
 mat4 rotateY(float theta) {
     float c = cos(theta);
@@ -28,6 +33,11 @@ mat4 rotateY(float theta) {
     );
 }
 
+vec3 doRotY(vec3 p, float theta) {
+    mat4 trans = rotateY(theta);
+    return (trans * vec4(p, 1.)).xyz;
+}
+
 // Rotation matrix around the Z axis.
 mat4 rotateZ(float theta) {
     float c = cos(theta);
@@ -38,6 +48,11 @@ mat4 rotateZ(float theta) {
     vec4(0, 0, 1, 0),
     vec4(0, 0, 0, 1)
     );
+}
+
+vec3 doRotZ(vec3 p, float theta) {
+    mat4 trans = rotateZ(theta);
+    return (trans * vec4(p, 1.)).xyz;
 }
 
 // Identity matrix.
