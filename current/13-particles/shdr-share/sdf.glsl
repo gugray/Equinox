@@ -57,6 +57,9 @@ float sdOctahedron(vec3 p, float s) {
     return length(vec3(q.x, q.y-s+k, q.z-k));
 }
 
+float opSub(float d1, float d2) {
+    return max(-d2, d1);
+}
 
 // Create multiple copies of an object - https://iquilezles.org/articles/distfunctions
 vec2 opRepLim(in vec2 p, in float s, in vec2 lima, in vec2 limb)

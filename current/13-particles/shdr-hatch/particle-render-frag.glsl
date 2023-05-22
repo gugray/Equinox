@@ -8,9 +8,10 @@ precision highp float;
 // GIST.GLSL
 
 in vec2 props;
+uniform vec2 resolution;
 out vec4 outColor;
 
 void main() {
     outColor.a = 1.;
-    outColor.rgb = renderParticle(props);
+    outColor.rgb = renderParticle(gl_FragCoord.xy, resolution, props);
 }

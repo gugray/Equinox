@@ -1,3 +1,20 @@
+float map(float value, float inMin, float inMax, float outMin, float outMax) {
+    return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
+vec2 map(vec2 value, vec2 inMin, vec2 inMax, vec2 outMin, vec2 outMax) {
+    return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
+vec3 map(vec3 value, vec3 inMin, vec3 inMax, vec3 outMin, vec3 outMax) {
+    return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
+vec4 map(vec4 value, vec4 inMin, vec4 inMax, vec4 outMin, vec4 outMax) {
+    return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
+
 // From https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 // =============================================================================
 //	Simplex 3D Noise
@@ -99,9 +116,9 @@ float noise(in vec2 p) {
 
 // From https://www.shadertoy.com/view/XljGzV
 // =============================================================================
-vec3 hsl2rgb(vec3 c) {
-    vec3 rgb = clamp(abs(mod(c.x*6.0+vec3(0.0, 4.0, 2.0), 6.0)-3.0)-1.0, 0.0, 1.0);
-    return c.z + c.y * (rgb-0.5)*(1.0-abs(2.0*c.z-1.0));
+vec3 hsl2rgb(float h, float s, float l) {
+    vec3 rgb = clamp(abs(mod(h*6.0+vec3(0.0, 4.0, 2.0), 6.0)-3.0)-1.0, 0.0, 1.0);
+    return l + s * (rgb-0.5)*(1.0-abs(2.0*l-1.0));
 }
 
 // From https://stackoverflow.com/a/17479300
