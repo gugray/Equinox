@@ -23,7 +23,7 @@ import {Editor} from "./editor.js";
 // -- Add light/cam params to gist
 
 
-const nParticles = 8096 * 4;
+const nParticles = 8096 * 8;
 
 let editor;
 let webGLCanvas, gl, w, h;
@@ -364,6 +364,7 @@ function frame(time) {
     resolution: [w, h],
     pointSize: 1 * devicePixelRatio,
   };
+  unisParticleRender.pointSize = 1;
   let atmsPR = [{attachment: txOutput1}];
   let fbufPR = twgl.createFramebufferInfo(gl, atmsPR, w, h);
   twgl.bindFramebufferInfo(gl, fbufPR);
