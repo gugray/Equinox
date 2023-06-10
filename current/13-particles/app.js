@@ -23,7 +23,7 @@ import {Editor} from "./editor.js";
 // -- Add light/cam params to gist
 
 
-const nParticles = 8096 * 8;
+const nParticles = 8096 * 16;
 
 let editor;
 let webGLCanvas, gl, w, h;
