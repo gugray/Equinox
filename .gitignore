@@ -3,6 +3,8 @@ public/*.map
 public/*.html
 public/*.wasm
 
+public/dance
+
 zig/out
 zig/data.txt
 

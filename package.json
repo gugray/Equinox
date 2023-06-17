@@ -8,6 +8,7 @@
     "email": "gabor.reads.this@gmail.com"
   },
   "dependencies": {
+    "@streamparser/json": "^0.0.15",
     "adaptive-streamlines": "^0.0.1",
     "codemirror": "^5.65.13",
     "jszip": "^3.10.1",
