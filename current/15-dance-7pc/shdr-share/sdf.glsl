@@ -43,11 +43,10 @@ float sdCircle(vec2 p, float r) {
     return length(p) - r;
 }
 
-//float sdSegment(vec3 p, vec3 a, vec3 b, float r) {
-//    //float h = min(1.0, max(0.0, dot(p-a, b-a) / dot(b-a, b-a)));
-//    float h = clamp(dot(p-a, b-a) / dot(b-a, b-a), 0.0, 1.0);
-//    return length(p-a - (b-a)*h)-R;
-//}
+float sdSegment(vec3 p, vec3 a, vec3 b, float r) {
+    float h = clamp(dot(p-a, b-a) / dot(b-a, b-a), 0.0, 1.0);
+    return length(p-a - (b-a)*h)-r;
+}
 
 float sdCone(vec3 p, vec2 c, float h) {
     // c is the sin/cos of the angle, h is height
@@ -86,6 +85,27 @@ vec2 opRepLim(in vec2 p, in float s, in vec2 lima, in vec2 limb)
 {
     return p-s*clamp(round(p/s), lima, limb);
 }
+
+// Repeat space along one axis. Use like this to repeat along the x axis:
+// <float cell = pMod1(p.x,5);> - using the return value is optional.
+float opMod1(inout float p, float size)
+{
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    return c;
+}
+
+// Same, but mirror every second cell so they match at the boundaries
+float opModMirror1(inout float p, float size)
+{
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    p *= mod(c, 2.0) * 2.0 - 1.0;
+    return c;
+}
+
 
 // Create multiple copies of an object - https://iquilezles.org/articles/distfunctions
 // https://www.shadertoy.com/view/3syGzz Limited Repetition SDF by iq

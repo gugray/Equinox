@@ -13,29 +13,40 @@ import * as H from "./history.js";
 import {Editor} from "./editor.js";
 
 // TODO:
-// OK Add initial gist to editor
-// OK Recompile programs on Cmd+Enter; syntax flash
-// OK Re-init on full screen mode
-// OK Rename scene shaders
-// OK Add fragment update to gist
-// OK Save all non-erroring gist versions in localStorage; save
-// -- Serve without watch
 // -- Only one light
 // -- Add light/cam params to gist
 
 
-const nParticles = 8096 * 20;
+const nParticles = 8096 * 10;
 
-// let danceUrl = "dance/WalkTheDemon_frontal_by_Marco_Goecke.json";
-let danceUrl = "dance/Unforgiven_MerakiCrew_Amelie.json";
-// let danceUrl = "dance/.json";
-// let danceUrl = "dance/.json";
-// let danceUrl = "dance/.json";
-// let danceUrl = "dance/.json";
+// let danceUrl = "dance/Tricky_MerakiCrew_Kye.json"; // !!
+// let danceUrl = "dance/Roar_MerakiCrew_Lay.json"; // on the knee
 // let danceUrl = "dance/Peaches_MerakiCrew_Vivi.json";
-// let danceUrl = "dance/kPOP_by_NN.json";
+let danceUrl = "dance/Unforgiven_MerakiCrew_Amelie.json";
+// let danceUrl = "dance/Advice_MerakiCrew_Ace.json";
 // let danceUrl = "dance/LaDiDa_MerakiCrew_Kian.json";
-let danceData, nDancePtKeys, nDanceFrames, nDanceFramesPerRow;
+// let danceUrl = "dance/Tango_Vals_by_Uwe_Bethke.json";
+// let danceUrl = "dance/TheLover_Opening.json";
+// let danceUrl = "dance/TheLoverChiarasSolo_frontal_by_Marco_Goecke.json";
+// let danceUrl = "dance/WalkTheDemon_frontal_by_Marco_Goecke.json";
+// let danceUrl = "dance/Tue_frontal_by_Marco_Goecke.json";
+// let danceUrl = "dance/unAutreJour_frontal_by_Ken_Ossola.json"; // ballet
+// let danceUrl = "dance/DerLiebhaber_frontal_by_Marco_Goecke.json"; // !!
+// let danceUrl = "dance/Edge_Me_Away_by_Emrecan_Tanis.json";
+// let danceUrl = "dance/Firebird_frontal_by_Marco_Goecke.json";
+// let danceUrl = "dance/Impro_frontal_by_Chiara_Pareo.json"; // *!!
+// let danceUrl = "dance/Milk_frontal_by_Guillaume_Hulot.json"; // *!!
+// let danceUrl = "dance/Moonlight_frontal_by_Juliano_Nunes.json";
+// let danceUrl = "dance/SometimesIwakeup_frontal_by_Chiara_Pareo.json";
+// let danceUrl = "dance/sway_frontal_by_Medhi_Walerski.json";
+// let danceUrl = "dance/Tagada_frontal_by_Sofia_Nappi.json";
+// let danceUrl = "dance/.json";
+// let danceUrl = "dance/.json";
+// let danceUrl = "dance/.json";
+
+let danceData1_lastUrl = null;
+let danceData1, nDancePtKeys1, nDanceFrames1, nDanceFramesPerRow1;
+let danceData2, nDancePtKeys2, nDanceFrames2, nDanceFramesPerRow2;
 
 let editor;
 let webGLCanvas, gl, w, h;
@@ -43,7 +54,7 @@ let sdfW = 480, sdfH;
 let seqId, newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
 let particleArrays, particleBufferInfo;   // Used to drive paricle state compute shader, and particle renderer
-let txDance;                              // Texture holding dance frames
+let txDance1, txDance2;                   // Textures holding dance frames
 let szParticleState;                      // Size of (square-shaped) particle state textures
 let txParticleState0, txParticleState1;   // Texture holding state of particles. Pingpong.
 let txScene;                              // Texture holding SDF scene and direction/darkness/depth
@@ -66,11 +77,11 @@ const params = {
   },
   lights: {
     l1_azimuth: -75,
-    l1_altitude: 60,
+    l1_altitude: 20,
     l1_strength: 0.3,
-    l2_azimuth: -75,
-    l2_altitude: 30,
-    l2_strength: 0,
+    l2_azimuth: 30,
+    l2_altitude: 70,
+    l2_strength: 0.1,
     amb_strength: 0.05,
   },
 }
@@ -85,7 +96,7 @@ init(setup, true);
 
 async function setup() {
 
-  danceData = await loadDanceData(danceUrl);
+  danceData1 = await loadDanceData(danceUrl);
   setupEditor();
 
   // This sketch doesn't use footer, or 2D canvas
@@ -155,34 +166,38 @@ async function setup() {
 
 function initDanceTexture() {
 
-  // A roughly square texture, where each row holds an X number of full frames
-  nDanceFrames = danceData.length;
-  nDancePtKeys = figurePtKeys.length;
-  let sz = Math.ceil(Math.sqrt(nDanceFrames * nDancePtKeys));
-  nDanceFramesPerRow = Math.ceil(sz / nDancePtKeys);
-  let txw = nDanceFramesPerRow * nDancePtKeys;
-  let txh = Math.ceil(nDanceFrames * nDancePtKeys / txw);
+  const doInit = data => {
+    // A roughly square texture, where each row holds an X number of full frames
+    const nDanceFrames = data.length;
+    const nDancePtKeys = figurePtKeys.length;
+    let sz = Math.ceil(Math.sqrt(nDanceFrames * nDancePtKeys));
+    const nDanceFramesPerRow = Math.ceil(sz / nDancePtKeys);
+    const txw = nDanceFramesPerRow * nDancePtKeys;
+    const txh = Math.ceil(nDanceFrames * nDancePtKeys / txw);
 
-  const dtDance = new Float32Array(txw * txh * 4);
-  let i = 0;
-  for (let iFrame = 0; iFrame < nDanceFrames; ++iFrame) {
-    for (let iKey = 0; iKey < nDancePtKeys; ++iKey) {
-      for (let n = 0; n < 4; ++n) {
-        dtDance[i] = danceData[iFrame][iKey][n];
-        ++i;
+    const dtDance = new Float32Array(txw * txh * 4);
+    let i = 0;
+    for (let iFrame = 0; iFrame < nDanceFrames; ++iFrame) {
+      for (let iKey = 0; iKey < nDancePtKeys; ++iKey) {
+        for (let n = 0; n < 4; ++n) {
+          dtDance[i] = data[iFrame][iKey][n];
+          ++i;
+        }
       }
     }
+    const txDance = twgl.createTexture(gl, {
+      internalFormat: gl.RGBA32F,
+      format: gl.RGBA,
+      type: gl.FLOAT,
+      width: txw,
+      height: txh,
+      src: dtDance,
+    });
+    return [nDanceFrames, nDancePtKeys, nDanceFramesPerRow, txDance];
   }
-  txDance = twgl.createTexture(gl, {
-    internalFormat: gl.RGBA32F,
-    format: gl.RGBA,
-    type: gl.FLOAT,
-    width: txw,
-    height: txh,
-    src: dtDance,
-  });
 
-  danceData = null;
+  [nDanceFrames1, nDancePtKeys1, nDanceFramesPerRow1, txDance1] = doInit(danceData1);
+  danceData1 = null;
 }
 
 function resizeCanvas() {
@@ -355,7 +370,8 @@ function frame(time) {
     light2Vec: angleToVec(params.lights.l2_azimuth, params.lights.l2_altitude),
     light2Strength: params.lights.l2_strength,
     ambientLightStrength: params.lights.amb_strength,
-    txDance, nDancePtKeys, nDanceFrames, nDanceFramesPerRow,
+    txDance1, nDancePtKeys1, nDanceFrames1, nDanceFramesPerRow1,
+    // txDance2, nDancePtKeys2, nDanceFrames2, nDanceFramesPerRow2,
   };
   let atmsScene = [{attachment: txScene}];
   let fbufScene = twgl.createFramebufferInfo(gl, atmsScene, sdfW, sdfH);

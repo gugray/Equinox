@@ -3,7 +3,7 @@
 // ===============================
 // 32.0
 // 16.0 for Uwe Bethke
-const float scale = 40.;
+const float scale = 32.;
 
 vec2 dancer(vec3 p, vec2 res,
 sampler2D tx, float nDanceFramesPerRow, float nDancePtKeys,
@@ -31,7 +31,7 @@ float frameIx) {
     vec3 rightEar = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12 + 13, 0), 0).xyz;
     vec3 nose = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(26, 0), 0).xyz;
 
-    const float thck = 0.6;
+    const float thck = 0.4;
     // res = opU(res, vec2(sdSegment(p, leftAnkle, leftKnee, thck), 10.0));
     res = opU(res, vec2(sdSegment(p, (leftHip + rightHip) * 0.5, leftShoulder, thck), 10.0));
     res = opU(res, vec2(sdSegment(p, (leftHip + rightHip) * 0.5, rightShoulder, thck), 10.0));
@@ -55,44 +55,24 @@ float frameIx) {
 
 vec2 map(vec3 p) {
 
+    // return vec2(0.);
     // opCircRep(q.xy, 2.);
-    // float d = sdBox(q, vec3(8., 0.2, 12.));
-    // res = opU(res, vec2(d, 1.));
 
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
 
     {
         vec3 q = p;
-        q -= vec3(8., -7.5, -12.);
-        // q = doRotY(q, t * 0.0004);
-        q = doRotZ(q, PI * 0.05);
-        float d = sdBox(q, vec3(8., 0.2, 12.));
-        res = opU(res, vec2(d, 1.));
-    }
-    {
-        vec3 q = p;
-        q -= vec3(18.0, 3.0, -12.);
-        q = doRotZ(q, PI * 0.45);
-        float d = sdBox(q, vec3(10., 0.2, 12.));
-        res = opU(res, vec2(d, 1.));
+        q -= vec3(8., -4.5, 0.);
+        float d = sdBox(q, vec3(5., 0.2, 6.));
+        // res = opU(res, vec2(d, 1.));
     }
 
     {
         vec3 q = p;
-        q -= vec3(8.0, 0.0, -12.0);
-        q -= vec3(-scale * 0.5, scale * 0.67, 0.0);
+        q -= vec3(-scale * 0.5 + 12., scale * 0.6, -10.);
         float frameIx = floor(mod(time * 15. / 1000., nDanceFrames1));
         res = dancer(q, res, txDance1, nDanceFramesPerRow1, nDancePtKeys1, frameIx);
-    }
-
-    {
-        vec3 q = p;
-        q -= vec3(8.0, 4.0, -12.0);
-        q = doRotY(q, t * -0.0003);
-        opCircRep(q.xz, 11.);
-        q -= vec3(10.0, 0, 0);
-        res = opU(res, vec2(sdOctahedron(q, 1.3), 2.0));
     }
 
     return res;
@@ -199,15 +179,12 @@ vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
     float lum = props.x;
     float id = props.y;
 
-    res.rgb = hsl2rgb(0.7, 0.6e, 0.7);
+    res.rgb = hsl2rgb(0.7, 0.4, 0.6);
 
     if (id == 0.) return res;
 
     if (id == 1.) {
         res.rgb = hsl2rgb(0.6, 0.4, lum);
-    }
-    if (id == 2.) {
-        res.rgb = hsl2rgb(0.0, 0.7, lum * 0.2 + 0.3);
     }
     else if (id == 10.) {
         res.rgb = hsl2rgb(0.15, 0.6, lum);
