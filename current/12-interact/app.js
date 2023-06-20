@@ -487,11 +487,11 @@ async function slHatch() {
     density: densityFun,
     width: w,
     height: h,
-    minStartDist: 8,
-    maxStartDist: 36,
+    minStartDist: 4,
+    maxStartDist: 18,
     endRatio: 0.4,
     minPointsPerLine: 5,
-    stepLength: 2,
+    stepLength: 1,
     onStreamlineAdded: lineAdded,
   });
 
