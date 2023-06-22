@@ -96,6 +96,76 @@ float opMod1(inout float p, float size)
     return c;
 }
 
+// Repeat only a few times: from indices <start> to <stop> (similar to above, but more flexible)
+float opModInterval1(inout float p, float size, float start, float stop)
+{
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p+halfsize, size) - halfsize;
+    if (c > stop) { //yes, this might not be the best thing numerically.
+        p += size*(c - stop);
+        c = stop;
+    }
+    if (c <start) {
+        p += size*(c - start);
+        c = start;
+    }
+    return c;
+}
+
+// Repeat in two dimensions
+vec2 opMod2(inout vec2 p, vec2 size)
+{
+    vec2 c = floor((p + size*0.5)/size);
+    p = mod(p + size*0.5,size) - size*0.5;
+    return c;
+}
+
+vec2 opModInterval2(inout vec2 p, vec2 size, vec2 start, vec2 stop)
+{
+    vec2 c = floor((p + size*0.5) / size);
+    p = mod(p + size*0.5, size) - size*0.5;
+    if (c.x > stop.x) {
+        p.x += size.x * (c.x - stop.x);
+        c.x = stop.x;
+    }
+    if (c.x < start.x) {
+        p.x += size.x * (c.x - start.x);
+        c.x = start.x;
+    }
+    if (c.y > stop.y) {
+        p.y += size.y * (c.y - stop.y);
+        c.y = stop.y;
+    }
+    if (c.y < start.y) {
+        p.y += size.y * (c.y - start.y);
+        c.y = start.y;
+    }
+    return c;
+}
+
+
+// Same, but mirror every second cell so all boundaries match
+vec2 opModMirror2(inout vec2 p, vec2 size)
+{
+    vec2 halfsize = size*0.5;
+    vec2 c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    p *= mod(c,vec2(2.0))*2.0 - vec2(1.0);
+    return c;
+}
+
+// Same, but mirror every second cell at the diagonal as well
+vec2 opModGrid2(inout vec2 p, vec2 size)
+{
+    vec2 c = floor((p + size*0.5)/size);
+    p = mod(p + size*0.5, size) - size*0.5;
+    p *= mod(c,vec2(2))*2.0 - vec2(1);
+    p -= size/2.0;
+    if (p.x > p.y) p.xy = p.yx;
+    return floor(c/2.0);
+}
+
 // Same, but mirror every second cell so they match at the boundaries
 float opModMirror1(inout float p, float size)
 {

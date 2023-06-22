@@ -1,10 +1,11 @@
 #version 300 es
 
+#include "../shdr-share/globals.glsl"
+
 in float index;
 uniform sampler2D particles;
 uniform float szParticleState;
 uniform vec2 resolution;
-uniform float pointSize;
 out vec2 props;
 
 void main() {

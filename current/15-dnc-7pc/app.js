@@ -293,6 +293,7 @@ function initPrograms() {
 }
 
 function setupEditor() {
+  const elmCredits = document.getElementById("credits");
   const elmShaderEditorBox = document.getElementById("shaderEditorBox");
   elmShaderEditorBox.style.display = "block";
   editor = new Editor(elmShaderEditorBox);
@@ -303,12 +304,25 @@ function setupEditor() {
     let handled = false;
     if (e.metaKey && e.key == "e") {
       if (editor.cm.hasFocus()) editor.cm.display.input.blur();
-      else editor.cm.display.input.focus();
+      else {
+        editor.cm.display.input.focus();
+        elmCredits.classList.remove("visible");
+      }
       handled = true;
     }
     if (e.metaKey && e.key == "s") {
       H.saveHistory(e.shiftKey);
       if (e.shiftKey) seqId = 0;
+      handled = true;
+    }
+    if (e.metaKey && e.key == "d") {
+      if (elmCredits.classList.contains("visible")) {
+        elmCredits.classList.remove("visible");
+      }
+      else {
+        editor.cm.display.input.blur();
+        elmCredits.classList.add("visible");
+      }
       handled = true;
     }
     if (handled) {
@@ -402,9 +416,9 @@ function frame(time) {
     particles: txParticleState0,
     szParticleState: szParticleState,
     resolution: [w, h],
-    pointSize: 1 * devicePixelRatio,
+    // pointSize: 1 * devicePixelRatio,
   };
-  unisParticleRender.pointSize = 1;
+  // unisParticleRender.pointSize = 1;
   let atmsPR = [{attachment: txOutput1}];
   let fbufPR = twgl.createFramebufferInfo(gl, atmsPR, w, h);
   twgl.bindFramebufferInfo(gl, fbufPR);

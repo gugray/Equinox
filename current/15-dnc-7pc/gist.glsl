@@ -1,3 +1,4 @@
+
 void view() {
     eyeFOV = 45.0 * PI / 180.0;
     eyeAzimuth = 0.0001 * PI / 180.0;
@@ -6,7 +7,7 @@ void view() {
     light1Vec = angleToVec(-75.0, 20.0);
     light1Strength = 0.3;
     light2Vec = angleToVec(30.0, 70.0);
-    light2Strength = 0.3;
+    light2Strength = 0.2;
     ambientLightStrength = 0.05;
 
 }
@@ -50,9 +51,12 @@ float frameIx) {
 
 vec2 map(vec3 p) {
 
+    // opMod1(q.y, 4.0);
     // opCircRep(q.xz, 2.);
     // float d = sdBox(q, vec3(8., 0.2, 12.));
     // res = opU(res, vec2(d, 1.));
+    // vec2 ix = opModInterval2(q.xz, vec2(sz * 2.0 + 0.5), vec2(-2.0), vec2(2.0));
+    // float clr = (snoise(vec3(ix.xy, mod(t * 0.0005, 20.0))) + 1.0) * 0.5;
 
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
@@ -120,7 +124,7 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
 
     // Move this particle!
     // res.xy += vec2(random(prevState.y) - 0.5, random(prevState.x) - 0.5) * 1.;
-    res.xy += noiseLo * 0.1;
+    res.xy += noiseLo * 0.5;
     // res.xy += noiseLo * pow(sin(t * 0.0007), 3.0) * 300.0;
     // res.xy += noiseLo * cos(t * 0.0003) * 300.0;
     // res.xy += noiseHi * 0.7;
@@ -176,8 +180,8 @@ vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
 
     if (id == 0.) return res;
 
-    if (id == 1.) {
-        res.rgb = hsl2rgb(0.6, 0.4, lum);
+    if (id >= 1. && id < 2.) {
+        res.rgb = hsl2rgb(id - 1.0, 0.4, lum);
     }
     if (id == 2.) {
         res.rgb = hsl2rgb(0.0, 0.7, lum * 0.2 + 0.3);
