@@ -7,18 +7,9 @@ precision highp float;
 out vec4 outColor;
 
 uniform vec2 resolution;
-uniform float eyeFOV;
-uniform float eyeAzimuth;
-uniform float eyeAltitude;
-uniform float eyeDistance;
-uniform vec3 light1Vec;
-uniform float light1Strength;
-uniform vec3 light2Vec;
-uniform float light2Strength;
-uniform float ambientLightStrength;
 uniform bool curvatureLight;
 
-#include "../shdr-share/consts.glsl"
+#include "../shdr-share/globals.glsl"
 #include "../shdr-share/geo.glsl"
 #include "../shdr-share/sdf.glsl"
 #include "../shdr-share/utils.glsl"
@@ -79,17 +70,21 @@ PointInfo calcPoint(vec2 coord) {
     res.color.w = 1.0;
 
     // Diffuse illumination with shadow - light 1
+    if (light1Strength > 0.0)
     {
         vec3 normLightDir = normalize(light1Vec);
         float strength = light1Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);
-        float shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
+        float shadow = 1.0;
+        shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
         res.color.xyz += vec3(strength * shadow);
     }
     // Diffuse illumination with shadow - light 2
+    if (light2Strength > 0.0)
     {
         vec3 normLightDir = normalize(light2Vec);
         float strength = light2Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);
-        float shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
+        float shadow = 1.0;
+        shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
         res.color.xyz += vec3(strength * shadow);
     }
     // Ambient light, plus some light from above
@@ -102,6 +97,7 @@ PointInfo calcPoint(vec2 coord) {
 
 void main() {
 
+    view();
     vec2 coord = gl_FragCoord.xy;
     PointInfo info = calcPoint(coord);
     float light = clamp(info.color.r + info.color.b + info.color.g / 3., 0., 1.);

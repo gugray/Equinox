@@ -1,7 +1,7 @@
 #version 300 es
 precision highp float;
 
-#include "../shdr-share/consts.glsl"
+#include "../shdr-share/globals.glsl"
 #include "../shdr-share/geo.glsl"
 #include "../shdr-share/sdf.glsl"
 #include "../shdr-share/utils.glsl"

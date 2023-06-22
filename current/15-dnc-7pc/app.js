@@ -44,9 +44,8 @@ let danceUrl = "dance/Unforgiven_MerakiCrew_Amelie.json";
 // let danceUrl = "dance/.json";
 // let danceUrl = "dance/.json";
 
-let danceData1_lastUrl = null;
-let danceData1, nDancePtKeys1, nDanceFrames1, nDanceFramesPerRow1;
-let danceData2, nDancePtKeys2, nDanceFrames2, nDanceFramesPerRow2;
+let danceData1, nDncPtKeys1, nDncFrames1, nDncFramesPerRow1;
+let danceData2, nDncPtKeys2, nDncFrames2, nDncFramesPerRow2;
 
 let editor;
 let webGLCanvas, gl, w, h;
@@ -54,7 +53,7 @@ let sdfW = 480, sdfH;
 let seqId, newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
 let particleArrays, particleBufferInfo;   // Used to drive paricle state compute shader, and particle renderer
-let txDance1, txDance2;                   // Textures holding dance frames
+let txDnc1, txDnc2;                       // Textures holding dance frames
 let szParticleState;                      // Size of (square-shaped) particle state textures
 let txParticleState0, txParticleState1;   // Texture holding state of particles. Pingpong.
 let txScene;                              // Texture holding SDF scene and direction/darkness/depth
@@ -69,21 +68,6 @@ const params = {
   rotate: true,
   raw_scene: false,
   curvature_light: false,
-  view: {
-    fov: 45,
-    azimuth: 0.0001,
-    altitude: 0,
-    distance: 20,
-  },
-  lights: {
-    l1_azimuth: -75,
-    l1_altitude: 20,
-    l1_strength: 0.3,
-    l2_azimuth: 30,
-    l2_altitude: 70,
-    l2_strength: 0.1,
-    amb_strength: 0.05,
-  },
 }
 
 // Textures
@@ -196,7 +180,7 @@ function initDanceTexture() {
     return [nDanceFrames, nDancePtKeys, nDanceFramesPerRow, txDance];
   }
 
-  [nDanceFrames1, nDancePtKeys1, nDanceFramesPerRow1, txDance1] = doInit(danceData1);
+  [nDncFrames1, nDncPtKeys1, nDncFramesPerRow1, txDnc1] = doInit(danceData1);
   danceData1 = null;
 }
 
@@ -360,18 +344,9 @@ function frame(time) {
   const unisSDF = {
     time: params.rotate ? time : 0,
     resolution: [sdfW, sdfH],
-    eyeFOV: Math.PI * params.view.fov / 180,
-    eyeAzimuth: Math.PI * params.view.azimuth / 180,
-    eyeAltitude: Math.PI * params.view.altitude / 180,
-    eyeDistance: params.view.distance,
     curvatureLight: params.curvature_light,
-    light1Vec: angleToVec(params.lights.l1_azimuth, params.lights.l1_altitude),
-    light1Strength: params.lights.l1_strength,
-    light2Vec: angleToVec(params.lights.l2_azimuth, params.lights.l2_altitude),
-    light2Strength: params.lights.l2_strength,
-    ambientLightStrength: params.lights.amb_strength,
-    txDance1, nDancePtKeys1, nDanceFrames1, nDanceFramesPerRow1,
-    // txDance2, nDancePtKeys2, nDanceFrames2, nDanceFramesPerRow2,
+    txDnc1, nDncPtKeys1, nDncFrames1, nDncFramesPerRow1,
+    // txDnc2, nDncPtKeys2, nDncFrames2, nDncFramesPerRow2,
   };
   let atmsScene = [{attachment: txScene}];
   let fbufScene = twgl.createFramebufferInfo(gl, atmsScene, sdfW, sdfH);
