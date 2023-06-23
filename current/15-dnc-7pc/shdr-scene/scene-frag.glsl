@@ -70,7 +70,7 @@ PointInfo calcPoint(vec2 coord) {
     res.color.w = 1.0;
 
     // Diffuse illumination with shadow - light 1
-    if (light1Strength > 0.0)
+    if (shadows && light1Strength > 0.0)
     {
         vec3 normLightDir = normalize(light1Vec);
         float strength = light1Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);
@@ -79,7 +79,7 @@ PointInfo calcPoint(vec2 coord) {
         res.color.xyz += vec3(strength * shadow);
     }
     // Diffuse illumination with shadow - light 2
-    if (light2Strength > 0.0)
+    if (shadows && light2Strength > 0.0)
     {
         vec3 normLightDir = normalize(light2Vec);
         float strength = light2Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);

@@ -12,6 +12,8 @@ uniform float nDncFramesPerRow1;
 
 float pointSize = 1.0;
 
+bool shadows = true;
+
 float eyeFOV;
 float eyeAzimuth;
 float eyeAltitude;

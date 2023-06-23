@@ -17,7 +17,7 @@ import {Editor} from "./editor.js";
 // -- Add light/cam params to gist
 
 
-const nParticles = 8096 * 10;
+const nParticles = 8096 * 8;
 
 // let danceUrl = "dance/Tricky_MerakiCrew_Kye.json"; // !!
 // let danceUrl = "dance/Roar_MerakiCrew_Lay.json"; // on the knee

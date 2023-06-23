@@ -1,53 +1,49 @@
 
-// Dancer
-// ===============================
-// 32.0
-// 16.0 for Uwe Bethke
-const float scale = 32.;
+void view() {
+    eyeFOV = 45.0 * PI / 180.0;
+    eyeAzimuth = 0.0001 * PI / 180.0;
+    eyeAltitude = 0.0 * PI / 180.0;
+    eyeDistance = 32.0;
+    light1Vec = angleToVec(-75.0, 20.0);
+    light1Strength = 0.3;
+    light2Vec = angleToVec(30.0, 70.0);
+    light2Strength = 0.2;
+    ambientLightStrength = 0.05;
 
-vec2 dancer(vec3 p, vec2 res,
-sampler2D tx, float nDanceFramesPerRow, float nDancePtKeys,
+}
+
+const float scale = 40.;
+
+vec2 dnc(vec3 p, vec2 res,
+sampler2D tx, float nDncFramesPerRow, float nDncPtKeys,
 float frameIx) {
 
     vec2 xyFrame;
-    xyFrame.y = floor(frameIx / nDanceFramesPerRow);
-    xyFrame.x = mod(frameIx, nDanceFramesPerRow) * nDancePtKeys;
+    xyFrame.y = floor(frameIx / nDncFramesPerRow);
+    xyFrame.x = mod(frameIx, nDncFramesPerRow) * nDncPtKeys;
 
-    vec3 leftFootIndex = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0, 0), 0).xyz;
-    vec3 rightFootIndex = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0 + 13, 0), 0).xyz;
-    vec3 leftAnkle = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2, 0), 0).xyz;
-    vec3 rightAnkle = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2 + 13, 0), 0).xyz;
-    vec3 leftKnee = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(3, 0), 0).xyz;
-    vec3 rightKnee = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(3 + 13, 0), 0).xyz;
-    vec3 leftHip = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(4, 0), 0).xyz;
-    vec3 rightHip = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(4 + 13, 0), 0).xyz;
-    vec3 leftShoulder = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(5, 0), 0).xyz;
-    vec3 rightShoulder = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(5 + 13, 0), 0).xyz;
-    vec3 leftElbow = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(6, 0), 0).xyz;
-    vec3 rightElbow = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(6 + 13, 0), 0).xyz;
-    vec3 leftWrist = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7, 0), 0).xyz;
-    vec3 rightWrist = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7 + 13, 0), 0).xyz;
-    vec3 leftEar = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12, 0), 0).xyz;
-    vec3 rightEar = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12 + 13, 0), 0).xyz;
-    vec3 nose = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(26, 0), 0).xyz;
+    vec3 lfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0, 0), 0).xyz;
+    vec3 rfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0 + 13, 0), 0).xyz;
+    vec3 lank = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2, 0), 0).xyz;
+    vec3 rank = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2 + 13, 0), 0).xyz;
+    vec3 lkn = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(3, 0), 0).xyz;
+    vec3 rkn = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(3 + 13, 0), 0).xyz;
+    vec3 lh = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(4, 0), 0).xyz;
+    vec3 rh = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(4 + 13, 0), 0).xyz;
+    vec3 lsh = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(5, 0), 0).xyz;
+    vec3 rsh = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(5 + 13, 0), 0).xyz;
+    vec3 lelb = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(6, 0), 0).xyz;
+    vec3 relb = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(6 + 13, 0), 0).xyz;
+    vec3 lwr = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7, 0), 0).xyz;
+    vec3 rwr = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7 + 13, 0), 0).xyz;
+    vec3 lind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9, 0), 0).xyz;
+    vec3 rind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9 + 13, 0), 0).xyz;
+    vec3 lea = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12, 0), 0).xyz;
+    vec3 rea = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12 + 13, 0), 0).xyz;
+    vec3 nz = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(26, 0), 0).xyz;
 
-    const float thck = 0.4;
-    // res = opU(res, vec2(sdSegment(p, leftAnkle, leftKnee, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, (leftHip + rightHip) * 0.5, leftShoulder, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, (leftHip + rightHip) * 0.5, rightShoulder, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, leftShoulder, rightShoulder, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, leftShoulder, leftElbow, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, leftElbow, leftWrist, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, rightShoulder, rightElbow, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, rightElbow, rightWrist, thck), 10.0));
-
-    res = opU(res, vec2(sdSegment(p, leftHip, leftKnee, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, leftKnee, leftAnkle, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, rightHip, rightKnee, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, rightKnee, rightAnkle, thck), 10.0));
-
-    res = opU(res, vec2(sdSegment(p, leftEar, rightEar, thck), 10.0));
-    res = opU(res, vec2(sdSegment(p, (leftEar + rightEar) * 0.5, nose, thck), 10.0));
+    const float thck = 0.6;
+    // res = opU(res, vec2(sdSegment(p, lank, lkn, thck), 10.0));
 
     return res;
 }
@@ -55,24 +51,54 @@ float frameIx) {
 
 vec2 map(vec3 p) {
 
-    // return vec2(0.);
-    // opCircRep(q.xy, 2.);
+    // opMod1(q.y, 4.0);
+    // opCircRep(q.xz, 2.);
+    // float d = sdBox(q, vec3(8., 0.2, 12.));
+    // res = opU(res, vec2(d, 1.));
+    // vec2 ix = opModInterval2(q.xz, vec2(sz * 2.0 + 0.5), vec2(-2.0), vec2(2.0));
+    // float clr = (snoise(vec3(ix.xy, mod(t * 0.0005, 20.0))) + 1.0) * 0.5;
 
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
 
     {
-        vec3 q = p;
-        q -= vec3(8., -4.5, 0.);
-        float d = sdBox(q, vec3(5., 0.2, 6.));
-        // res = opU(res, vec2(d, 1.));
+        vec3 pp = p - vec3(8.0, -7.5, 0.0);
+        {
+            vec3 q = pp;
+
+            q = doRotZ(q, sin(t * 0.0005) * 0.1);
+            q.y += t * 0.001;
+            const float dst = 6.0;
+            vec2 ix = opMod2(q.xy, vec2(dst));
+
+            q = doRotY(q, t * 0.0003 + ix.y);
+
+
+            const float th = 0.2;
+            float szfl = pow((sin(t * 0.003) + 1.0) * 0.5, 2.0) * 0.8;
+            szfl = pow((snoise(vec3(ix, t * 0.0003)) + 1.0) * 0.5, 2.0) * 2.0;
+            float sz = 1.0 + szfl;
+            vec3 p0 = vec3(0.0, sz, 0.0);
+            vec3 p1 = doRotZ(p0, PI * 2.0 * 0.4);
+            vec3 p2 = doRotZ(p1, PI * 2.0 * 0.4);
+            vec3 p3 = doRotZ(p2, PI * 2.0 * 0.4);
+            vec3 p4 = doRotZ(p3, PI * 2.0 * 0.4);
+            float d = sdSegment(q, p0, p1, th);
+            d = min(d, sdSegment(q, p1, p2, th));
+            d = min(d, sdSegment(q, p2, p3, th));
+            d = min(d, sdSegment(q, p3, p4, th));
+            d = min(d, sdSegment(q, p4, p0, th));
+            float clr = (snoise(vec3(ix, 0.0)) + 1.0) * 0.49;
+            res = opU(res, vec2(d, 9.0 + clr));
+        }
     }
 
     {
         vec3 q = p;
-        q -= vec3(-scale * 0.5 + 12., scale * 0.6, -10.);
-        float frameIx = floor(mod(time * 15. / 1000., nDanceFrames1));
-        res = dancer(q, res, txDance1, nDanceFramesPerRow1, nDancePtKeys1, frameIx);
+        q -= vec3(8.0, 0.0, 0.0);
+        q -= vec3(-scale * 0.5, scale * 0.67, 0.0);
+        float frameIx = floor(mod(time * 15. / 1000., nDncFrames1));
+        res = dnc(q, res, txDnc1, nDncFramesPerRow1, nDncPtKeys1, frameIx);
     }
 
     return res;
@@ -113,17 +139,17 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
     vec2 noiseLo, noiseHi;
     {
         float freq = 0.5;
-        float tt = 1000.;
+        float tt = t * 3. * 0.;
         float nofsX = snoise(vec3(uv * freq, tt * 0.0001));
         float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0001));
         noiseLo = vec2(nofsX, nofsY);
         noiseLo = normalize(noiseLo);
     }
     {
-        float freq = 7.;
+        float freq = 12.;
         float tt = t;
-        float nofsX = snoise(vec3(uv * freq, tt * 0.0001));
-        float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0001));
+        float nofsX = snoise(vec3(uv * freq, tt * 0.0009));
+        float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0009));
         noiseHi = vec2(nofsX, nofsY);
         noiseHi = normalize(noiseHi);
     }
@@ -131,6 +157,9 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
     // Move this particle!
     // res.xy += vec2(random(prevState.y) - 0.5, random(prevState.x) - 0.5) * 1.;
     res.xy += noiseLo * 0.5;
+    // res.xy += noiseLo * pow(sin(t * 0.0007), 3.0) * 300.0;
+    // res.xy += noiseLo * cos(t * 0.0003) * 300.0;
+    // res.xy += noiseHi * 0.7;
 
     res.zw = vec2(0.);
 
@@ -179,12 +208,18 @@ vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
     float lum = props.x;
     float id = props.y;
 
-    res.rgb = hsl2rgb(0.7, 0.4, 0.6);
+    res.rgb = hsl2rgb(0.7, 0.6, 0.7);
 
     if (id == 0.) return res;
 
-    if (id == 1.) {
-        res.rgb = hsl2rgb(0.6, 0.4, lum);
+    if (id >= 1. && id < 2.) {
+        res.rgb = hsl2rgb(id - 1.0, 0.4, lum);
+    }
+    if (id == 2.) {
+        res.rgb = hsl2rgb(0.0, 0.7, lum * 0.2 + 0.3);
+    }
+    if (id >= 9. && id < 10.) {
+        res.rgb = hsl2rgb(id - 9.0, 0.9, 0.7);
     }
     else if (id == 10.) {
         res.rgb = hsl2rgb(0.15, 0.6, lum);
