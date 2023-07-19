@@ -1,5 +1,6 @@
 
 void view() {
+    shadows = false;
     eyeFOV = 45.0 * PI / 180.0;
     eyeAzimuth = 0.0001 * PI / 180.0;
     eyeAltitude = 0.0 * PI / 180.0;
@@ -22,8 +23,8 @@ float frameIx) {
     xyFrame.y = floor(frameIx / nDncFramesPerRow);
     xyFrame.x = mod(frameIx, nDncFramesPerRow) * nDncPtKeys;
 
-    vec3 lfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0, 0), 0).xyz;
-    vec3 rfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0 + 13, 0), 0).xyz;
+    // vec3 lfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0, 0), 0).xyz;
+    // vec3 rfi = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(0 + 13, 0), 0).xyz;
     vec3 lank = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2, 0), 0).xyz;
     vec3 rank = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(2 + 13, 0), 0).xyz;
     vec3 lkn = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(3, 0), 0).xyz;
@@ -36,8 +37,8 @@ float frameIx) {
     vec3 relb = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(6 + 13, 0), 0).xyz;
     vec3 lwr = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7, 0), 0).xyz;
     vec3 rwr = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(7 + 13, 0), 0).xyz;
-    vec3 lind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9, 0), 0).xyz;
-    vec3 rind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9 + 13, 0), 0).xyz;
+    // vec3 lind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9, 0), 0).xyz;
+    // vec3 rind = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(9 + 13, 0), 0).xyz;
     vec3 lea = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12, 0), 0).xyz;
     vec3 rea = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(12 + 13, 0), 0).xyz;
     vec3 nz = scale * texelFetch(tx, ivec2(xyFrame) + ivec2(26, 0), 0).xyz;
@@ -60,38 +61,6 @@ vec2 map(vec3 p) {
 
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
-
-    {
-        vec3 pp = p - vec3(8.0, -7.5, 0.0);
-        {
-            vec3 q = pp;
-
-            q = doRotZ(q, sin(t * 0.0005) * 0.1);
-            q.y += t * 0.001;
-            const float dst = 6.0;
-            vec2 ix = opMod2(q.xy, vec2(dst));
-
-            q = doRotY(q, t * 0.0003 + ix.y);
-
-
-            const float th = 0.2;
-            float szfl = pow((sin(t * 0.003) + 1.0) * 0.5, 2.0) * 0.8;
-            szfl = pow((snoise(vec3(ix, t * 0.0003)) + 1.0) * 0.5, 2.0) * 2.0;
-            float sz = 1.0 + szfl;
-            vec3 p0 = vec3(0.0, sz, 0.0);
-            vec3 p1 = doRotZ(p0, PI * 2.0 * 0.4);
-            vec3 p2 = doRotZ(p1, PI * 2.0 * 0.4);
-            vec3 p3 = doRotZ(p2, PI * 2.0 * 0.4);
-            vec3 p4 = doRotZ(p3, PI * 2.0 * 0.4);
-            float d = sdSegment(q, p0, p1, th);
-            d = min(d, sdSegment(q, p1, p2, th));
-            d = min(d, sdSegment(q, p2, p3, th));
-            d = min(d, sdSegment(q, p3, p4, th));
-            d = min(d, sdSegment(q, p4, p0, th));
-            float clr = (snoise(vec3(ix, 0.0)) + 1.0) * 0.49;
-            res = opU(res, vec2(d, 9.0 + clr));
-        }
-    }
 
     {
         vec3 q = p;
@@ -139,7 +108,7 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
     vec2 noiseLo, noiseHi;
     {
         float freq = 0.5;
-        float tt = t * 3. * 0.;
+        float tt = 10.;
         float nofsX = snoise(vec3(uv * freq, tt * 0.0001));
         float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0001));
         noiseLo = vec2(nofsX, nofsY);
@@ -215,10 +184,10 @@ vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
     if (id >= 1. && id < 2.) {
         res.rgb = hsl2rgb(id - 1.0, 0.4, lum);
     }
-    if (id == 2.) {
+    else if (id == 2.) {
         res.rgb = hsl2rgb(0.0, 0.7, lum * 0.2 + 0.3);
     }
-    if (id >= 9. && id < 10.) {
+    else if (id >= 9. && id < 10.) {
         res.rgb = hsl2rgb(id - 9.0, 0.9, 0.7);
     }
     else if (id == 10.) {

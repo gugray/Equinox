@@ -70,21 +70,21 @@ PointInfo calcPoint(vec2 coord) {
     res.color.w = 1.0;
 
     // Diffuse illumination with shadow - light 1
-    if (shadows && light1Strength > 0.0)
+    if (light1Strength > 0.0)
     {
         vec3 normLightDir = normalize(light1Vec);
         float strength = light1Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);
         float shadow = 1.0;
-        shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
+        if (shadows) shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
         res.color.xyz += vec3(strength * shadow);
     }
     // Diffuse illumination with shadow - light 2
-    if (shadows && light2Strength > 0.0)
+    if (light2Strength > 0.0)
     {
         vec3 normLightDir = normalize(light2Vec);
         float strength = light2Strength * clamp(dot(normal, normLightDir), 0.0, 1.0);
         float shadow = 1.0;
-        shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
+        if (shadows) shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
         res.color.xyz += vec3(strength * shadow);
     }
     // Ambient light, plus some light from above
