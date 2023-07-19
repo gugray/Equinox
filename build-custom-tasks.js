@@ -35,7 +35,7 @@ exports = (options = {}) => {
       // Before build, clean up maps in target folder
       build.onStart(async () => {
         if (!options.prod) return;
-        try { fs.unlinkSync("public/app.js.map"); } catch {}
+        try { fs.unlinkSync(options.pubDir + "/app.js.map"); } catch {}
       });
 
       // When build is done, infuse cache busting hashes in hashes.html,
@@ -43,20 +43,20 @@ exports = (options = {}) => {
       build.onEnd(async result => {
         // Copy css from /src to /public
         let cssText = await fs.promises.readFile("src/app.css", "utf8");
-        await fs.promises.writeFile("public/app.css", cssText);
+        await fs.promises.writeFile(options.pubDir + "/app.css", cssText);
         // Get hashes
-        let appJsHash = await getHash("public/app.js");
-        let appCssHash = await getHash("public/app.css");
+        let appJsHash = await getHash(options.pubDir + "/app.js");
+        let appCssHash = await getHash(options.pubDir + "/app.css");
         let indexHtml = await fs.promises.readFile("src/index.html", "utf8");
         if (options.prod) {
           indexHtml = indexHtml.replace("./bundle.js", "./bundle.js?v=" + appJsHash);
           indexHtml = indexHtml.replace("./app.css", "./app.css?v=" + appCssHash);
           indexHtml = indexHtml.replace(/<!--LiveReload-->.*<!--LiveReload-->/is, "");
         }
-        await fs.promises.writeFile("public/index.html", indexHtml);
+        await fs.promises.writeFile(options.pubDir + "/index.html", indexHtml);
         let hashesTogether = appJsHash + "\n" + appCssHash;
         if (hashesTogether.length != 65) throw "wrong combined hash length";
-        await fs.promises.writeFile("public/hashes.html", hashesTogether);
+        await fs.promises.writeFile(options.pubDir + "/hashes.html", hashesTogether);
       });
     }
   };

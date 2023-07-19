@@ -1,5 +1,8 @@
 build();
 
+const mainPort = 8080;
+const backPort = 8081;
+
 async function build() {
 
   const esbuild = require("esbuild");
@@ -30,6 +33,8 @@ async function build() {
 
   let prod = args.prod ? true : false;
   let watch = false;
+  let isBackstage = args.sketch.startsWith("xx");
+  let pubDir = isBackstage ? "public-xx" : "public";
 
   if (args.watch) {
     watch = {
@@ -48,13 +53,13 @@ async function build() {
 
   esbuild.build({
     entryPoints: [sketchName],
-    outfile: "public/app.js",
+    outfile: pubDir + "/app.js",
     bundle: true,
     sourcemap: !args.prod,
     minify: args.prod,
     plugins: [
       myGlsl(),
-      customTasks({prod}),
+      customTasks({prod, pubDir}),
     ],
     watch: watch,
   }).catch(err => {
@@ -64,14 +69,16 @@ async function build() {
   }).then(() => {
     console.log("Build finished.");
     if (args.watch) {
-      livereload.createServer().watch("./public");
-      console.log("Watching changes, with livereload...");
+      if (!isBackstage) {
+        livereload.createServer().watch("./" + pubDir);
+        console.log("Watching changes, with livereload...");
+      }
       var server = new staticServer({
-        rootPath: "./public",
-        port: 8080,
+        rootPath: "./" + pubDir,
+        port: isBackstage ? backPort : mainPort,
       });
       server.start(function () {
-        console.log("Server listening at " + server.port);
+        console.log("Server listening at " + server.port + "; serving from " + pubDir);
       });
     }
   });
