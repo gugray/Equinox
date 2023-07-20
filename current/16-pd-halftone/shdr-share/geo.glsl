@@ -1,5 +1,3 @@
-#define PI 3.1415926535897932384626433832795
-
 vec3 angleToVec(float azimuth, float altitude) {
     return vec3(
         cos(PI * altitude / 180.0) * sin(PI * azimuth / 180.0),

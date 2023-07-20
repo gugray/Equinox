@@ -12,9 +12,6 @@ void view() {
 
 }
 
-const float scale = 40.;
-
-
 vec2 map(vec3 p) {
 
     // opMod1(q.y, 4.0);
@@ -28,6 +25,11 @@ vec2 map(vec3 p) {
     float t = time + 500.;
 
     {
+        vec3 q = p;
+        q -= vec3(8., 0., 0.);
+        q = doRotX(q, t * 0.005);
+        float d = sdTorus(q, vec2(5.0, 1.));
+        res = opU(res, vec2(d, 1.0));
     }
 
     return res;
@@ -52,104 +54,20 @@ vec2 getSurfaceGradient(sampler2D txScene, vec2 trgRes, ivec2 sc) {
     return vec2(gradX, gradY);
 }
 
-vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRes) {
+vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
 
-    vec4 res = prevState;
+    float rad = 15.0;
+    float dia = rad * 2.0;
+    vec2 cellXY = mod(trgCoord, dia) - vec2(rad);
+    vec2 cellCenter = floor(trgCoord / dia) * dia + vec2(rad);
 
-    vec2 resRatio = sceneRes / trgRes;
-    // SDF scene coordinates corresponding to particle
-    ivec2 sc = ivec2(prevState.xy * resRatio);
-    // Particle's normalized coordinates - y goes [0, 1]; x depends on AR
-    vec2 uv = prevState.xy / trgRes;
-    uv.x *= trgRes.x / trgRes.y;
+    vec2 uv = cellCenter / trgRes;
+    vec4 clrScene = texture(txScene, uv);
+    float li = clrScene[2];
 
-    float t = time;
 
-    vec2 noiseLo, noiseHi;
-    {
-        float freq = 0.5;
-        float tt = 10.;
-        float nofsX = snoise(vec3(uv * freq, tt * 0.0001));
-        float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0001));
-        noiseLo = vec2(nofsX, nofsY);
-        noiseLo = normalize(noiseLo);
-    }
-    {
-        float freq = 12.;
-        float tt = t;
-        float nofsX = snoise(vec3(uv * freq, tt * 0.0009));
-        float nofsY = snoise(vec3(uv * freq, 100. + tt * 0.0009));
-        noiseHi = vec2(nofsX, nofsY);
-        noiseHi = normalize(noiseHi);
-    }
+    if (length(cellXY) < rad * 1.1 * li)
+    return vec4(0.7, 0.2, 0.2, 1.);
+    return vec4(0.1, 0.1, 0.1, 1.);
 
-    // Move this particle!
-    // res.xy += vec2(random(prevState.y) - 0.5, random(prevState.x) - 0.5) * 1.;
-    res.xy += noiseLo * 0.5;
-    // res.xy += noiseLo * pow(sin(t * 0.0007), 3.0) * 300.0;
-    // res.xy += noiseLo * cos(t * 0.0003) * 300.0;
-    // res.xy += noiseHi * 0.7;
-
-    res.zw = vec2(0.);
-
-    // SDF scene
-    vec4 field = texelFetch(txScene, sc, 0);
-    float lum = field.z;
-    float id = field.w;
-
-    // Got object gradiend and depth
-    if (id != 0.) {
-        vec2 grad = getSurfaceGradient(txScene, trgRes, sc);
-        vec2 dir = normalize(grad);
-        dir = vec2(-dir.y, dir.x);
-        res.xy = prevState.xy
-        + 0.1 * noiseHi
-        + 2. * dir * pow(lum, 0.1); // Brighter moves faster
-        res.z = lum;
-        res.w = id;
-    }
-
-    // Stay on screen
-    res.xy = mod(res.xy, trgRes);
-
-    // Random throw particles elsewhere
-    float rndReset = random(length(prevState));
-    if (rndReset < 0.05) {
-
-        res.x = trgRes.x * random(prevState.y);
-        res.y = trgRes.y * random(prevState.x);
-
-        ivec2 sc = ivec2(res.xy * resRatio);
-        vec4 field = texelFetch(txScene, sc, 0);
-        if (field.w == 0.) res.zw = vec2(0.);
-        else {
-            res.z = field.z; // Lum
-            res.w = field.w; // ID
-        }
-    }
-
-    return res;
-}
-
-vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
-
-    vec3 res;
-    float lum = props.x;
-    float id = props.y;
-
-    res.rgb = hsl2rgb(0.7, 0.6, 0.7);
-
-    if (id == 0.) return res;
-
-    if (id >= 1. && id < 2.) {
-        res.rgb = hsl2rgb(id - 1.0, 0.4, lum);
-    }
-    if (id == 2.) {
-        res.rgb = hsl2rgb(0.0, 0.7, lum * 0.2 + 0.3);
-    }
-    else if (id == 10.) {
-        res.rgb = hsl2rgb(0.15, 0.6, lum);
-    }
-
-    return res;
 }

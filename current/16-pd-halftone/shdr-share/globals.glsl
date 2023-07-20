@@ -1,3 +1,5 @@
+#define PI 3.1415926535897932384626433832795
+
 const int MAX_MARCHING_STEPS = 255;
 const float MIN_DIST = 0.0;
 const float MAX_DIST = 100.0;
