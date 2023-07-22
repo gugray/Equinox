@@ -8,7 +8,7 @@ import * as twgl from "twgl.js";
 import * as H from "./history.js";
 import {Editor} from "./editor.js";
 
-const nParticles = 8096 * 10;
+const imgUrl1= "imgs/01-taucher.jpg";
 
 const wsPort = 2908;
 
@@ -17,25 +17,26 @@ let webGLCanvas, gl, w, h;
 let sdfW = 480, sdfH;
 let seqId, newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
+let txImg1, img1W, img1H;                 // Image to render
 let txScene;                              // Texture holding SDF scene and direction/darkness/depth
 let progiScene;                           // Draws raytraced SDF scene
 let progiRender;                          // Renders final image
 
 const params = {
   animate: true,
-  rotate: true,
-  raw_scene: false,
   curvature_light: false,
-}
+};
 
-// Textures
-// [sqrtnumpart]  particle state
-// [imgsize]      scene render: dlum; dist; light; id
-// [imgsize]      particle render
+const ctrl = {
+  ratio: 0,
+  index: 0,
+  note: 0,
+  vala: 10,
+  valb: 10,
+};
 
 document.body.classList.add("full");
 init(setup, true);
-
 
 async function setup() {
 
@@ -62,6 +63,9 @@ async function setup() {
   h = webGLCanvas.height;
   sdfH = Math.round(sdfW * h / w);
 
+  // Image(s) to render
+  await loadImageTextures();
+
   // SDF scene renderer's output texture
   const dtScene = new Float32Array(sdfW * sdfH * 4);
   dtScene.fill(0);
@@ -73,6 +77,8 @@ async function setup() {
     width: sdfW,
     height: sdfH,
     src: dtScene,
+    // min: gl.NEAREST,
+    // max: gl.NEAREST,
     min: gl.LINEAR,
     max: gl.LINEAR,
   });
@@ -87,6 +93,26 @@ async function setup() {
   requestAnimationFrame(frame);
 }
 
+async function loadImageTextures() {
+  return new Promise((resolve, reject) => {
+    twgl.createTexture(gl, { src: imgUrl1, mag: gl.NEAREST }, (err, texture, source) => {
+      if (err) {
+        reject(err);
+      }
+      else {
+        txImg1 = texture;
+        img1W = source.width;
+        img1H = source.height;
+        resolve();
+      }
+    });
+  });
+  // txImg1 = twgl.createTexture(gl, { src: imgUrl1, mag: gl.NEAREST }, (err, texture, source) => {
+  //   img1W = source.width;
+  //   img1H = source.height;
+  // });
+}
+
 
 function initSocket() {
   const socket = new WebSocket("ws://localhost:" + wsPort);
@@ -99,6 +125,14 @@ function initSocket() {
       console.log("Received gist (" + msg.length + " bytes)");
       editor.cm.doc.setValue(msg);
       initPrograms();
+    }
+    else {
+      const items = msg.split("\n").map(line => line.trim().replace(/;+$/, ""));
+      for (const itm of items) {
+        const parts = itm.split(" ");
+        if (parts.length < 2) continue;
+        if (ctrl.hasOwnProperty(parts[0])) ctrl[parts[0]] = parts[1];
+      }
     }
   });
   socket.addEventListener("close", () => {
@@ -202,12 +236,18 @@ function frame(time) {
   }
   const seqTime = time - seqTimeStart;
 
+  const addCtrl = unis => {
+    for (const key in ctrl)
+      unis["c_"+key] = ctrl[key];
+  }
+
   // Render SDF scene
   const unisSDF = {
-    time: params.rotate ? time : 0,
+    time: time,
     resolution: [sdfW, sdfH],
     curvatureLight: params.curvature_light,
   };
+  addCtrl(unisSDF);
   let atmsScene = [{attachment: txScene}];
   let fbufScene = twgl.createFramebufferInfo(gl, atmsScene, sdfW, sdfH);
   twgl.bindFramebufferInfo(gl, fbufScene);
@@ -219,11 +259,14 @@ function frame(time) {
 
   // Render scene texture to screen
   const unisDraw = {
+    time: time,
+    txImg1: txImg1,
+    img1Res: [img1W, img1H],
     txScene: txScene,
     sceneRes: [sdfW, sdfH],
     trgRes: [w, h],
-    rawScene: params.raw_scene,
   };
+  addCtrl(unisDraw);
   twgl.bindFramebufferInfo(gl, null);
   gl.viewport(0, 0, w, h);
   gl.useProgram(progiRender.program);

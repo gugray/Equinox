@@ -54,6 +54,7 @@ PointInfo calcPoint(vec2 coord) {
 
     // Didn't hit anything
     if (res.dist > MAX_DIST - EPSILON) {
+        res.color = vec4(vec3(bgLum), 1.);
         res.dist = 0.;
         res.id = 0.;
         return res;
@@ -87,8 +88,7 @@ PointInfo calcPoint(vec2 coord) {
         if (shadows) shadow = calcSoftshadow(p, normLightDir, 0.001, 20.0, 64.0);
         res.color.xyz += vec3(strength * shadow);
     }
-    // Ambient light, plus some light from above
-    //float ambient = ambientLightStrength * (1.0 + 0.5 * normal.y);
+    // Ambient light
     float ambient = ambientLightStrength;
     res.color.xyz += vec3(ambient);
 

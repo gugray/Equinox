@@ -4,7 +4,6 @@ precision highp float;
 uniform sampler2D txScene;
 uniform vec2 sceneRes;
 uniform vec2 trgRes;
-uniform bool rawScene;
 out vec4 outColor;
 
 #include "../shdr-share/globals.glsl"
