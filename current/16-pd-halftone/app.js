@@ -24,7 +24,6 @@ let progiRender;                          // Renders final image
 
 const params = {
   animate: true,
-  curvature_light: false,
 };
 
 const ctrl = {
@@ -61,6 +60,7 @@ async function setup() {
   // Current canvas size
   w = webGLCanvas.width;
   h = webGLCanvas.height;
+  // sdfW = w;
   sdfH = Math.round(sdfW * h / w);
 
   // Image(s) to render
@@ -245,12 +245,12 @@ function frame(time) {
   const unisSDF = {
     time: time,
     resolution: [sdfW, sdfH],
-    curvatureLight: params.curvature_light,
   };
   addCtrl(unisSDF);
   let atmsScene = [{attachment: txScene}];
   let fbufScene = twgl.createFramebufferInfo(gl, atmsScene, sdfW, sdfH);
   twgl.bindFramebufferInfo(gl, fbufScene);
+  // twgl.bindFramebufferInfo(gl, null);
   gl.viewport(0, 0, sdfW, sdfH);
   gl.useProgram(progiScene.program);
   twgl.setBuffersAndAttributes(gl, progiScene, sweepBufferInfo);

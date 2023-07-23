@@ -14,18 +14,70 @@ uniform bool curvatureLight;
 #include "../shdr-share/sdf.glsl"
 #include "../shdr-share/utils.glsl"
 // GIST.GLSL
-#include "march.glsl"
 #include "light.glsl"
 
 // Using the gradient of the SDF, estimate the normal on the surface at point p.
 vec3 estimateNormal(vec3 p) {
     vec2 e = vec2(1.0, -1.0) * EPSILON;
     return normalize(
-        e.xyy * map(p + e.xyy).x +
-        e.yyx * map(p + e.yyx).x +
-        e.yxy * map(p + e.yxy).x +
-        e.xxx * map(p + e.xxx).x);
+    e.xyy * map(p + e.xyy).x +
+    e.yyx * map(p + e.yyx).x +
+    e.yxy * map(p + e.yxy).x +
+    e.xxx * map(p + e.xxx).x);
 }
+
+// From https://www.shadertoy.com/view/XsB3Rm
+// Raymarching Sample Code by gltracy
+// Not using for now; here for reference
+vec2 ray_marching(vec3 ro, vec3 rd) {
+    float depth = 0.0;
+    float dist = 10000.0;
+    float step = 0.0;
+    float ep = 0.0001;
+    float id = 0.0;
+    for (int i = 0; i < 256; i++) {
+        vec3 pt = ro + rd * depth;
+        vec2 d_id = map(pt);
+        dist = d_id.x;
+        id = d_id.y;
+        if (dist < ep) {
+            break;
+        }
+        step = dist;
+        depth += step;
+        if (depth > MAX_DIST) {
+            break;
+        }
+    }
+    if (dist >= ep) {
+        return vec2(0.0, 0.0);
+    }
+    dist -= step;
+    for (int i = 0; i < 4; i++) {
+        step *= 0.5;
+        vec3 pt = ro + rd * (dist + step);
+        vec2 d_id = map(pt);
+        if (d_id.x >= ep) {
+            dist += step;
+        }
+    }
+    return vec2(depth, id);
+}
+
+vec2 march(vec3 ro, vec3 rd) {
+    float depth = MIN_DIST;
+    vec2 res = vec2(0.0);
+    float id = 0.;
+    for (int i = 0; i < MAX_MARCHING_STEPS; i++) {
+        vec3 p = ro + depth * rd;
+        res = map(p);
+        depth += res.x;
+        id = res.y;
+        if (res.x < EPSILON || depth > MAX_DIST) break;
+    }
+    return vec2(depth, id);
+}
+
 
 struct PointInfo {
     vec4 color; // Display color
@@ -102,5 +154,4 @@ void main() {
     PointInfo info = calcPoint(coord);
     float light = clamp(info.color.r + info.color.b + info.color.g / 3., 0., 1.);
     outColor = vec4(info.dlum, info.dist, light, info.id);
-    if (curvatureLight) outColor.z = info.dlum;
 }
