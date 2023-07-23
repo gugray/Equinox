@@ -36,7 +36,7 @@ footer a#download { display: none; float: right; margin-left: 10px; color: hsl(2
 #editorBg.error { background-color: red; transition: none; }
 #editorBg.apply { background-color: #aaa; transition: none; }
 #shaderEditorBox.focused { opacity: 1; }
-#shaderEditorBox.focused #editorBg {  opacity: 0.3; }
+#shaderEditorBox.focused #editorBg {  opacity: 0.6; }
 #shaderEditorBox .CodeMirror { height: 100%; }
 #shaderEditorBox .CodeMirror,
 #shaderEditorBox .CodeMirror-gutters {
@@ -47,3 +47,4 @@ footer a#download { display: none; float: right; margin-left: 10px; color: hsl(2
 .CodeMirror-scrollbar-filler {
   visibility: hidden;
 }
+#shaderEditorBox span.cm-comment { color: #a4c7a4; }
