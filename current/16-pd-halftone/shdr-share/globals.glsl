@@ -5,6 +5,7 @@ const float MIN_DIST = 0.1;
 const float MAX_DIST = 1000.0;
 const float EPSILON = 0.0001;
 
+uniform float dotRad;
 uniform float time;
 
 float pointSize = 1.0;

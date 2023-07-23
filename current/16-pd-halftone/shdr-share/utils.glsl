@@ -5,6 +5,13 @@ vec3 hsl2rgb(float h, float s, float l) {
     return l + s * (rgb-0.5)*(1.0-abs(2.0*l-1.0));
 }
 
+//  Function from Iñigo Quiles
+//  https://www.shadertoy.com/view/MsS3Wc
+vec3 hsb2rgb(float h, float s, float b) {
+    vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    rgb = rgb*rgb*(3.0-2.0*rgb);
+    return b * mix(vec3(1.0), rgb, s);
+}
 
 
 float map(float value, float inMin, float inMax, float outMin, float outMax) {

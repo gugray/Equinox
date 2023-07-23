@@ -24,6 +24,7 @@ let progiRender;                          // Renders final image
 
 const params = {
   animate: true,
+  dotRad: 5,
 };
 
 const ctrl = {
@@ -60,13 +61,26 @@ async function setup() {
   // Current canvas size
   w = webGLCanvas.width;
   h = webGLCanvas.height;
-  // sdfW = w;
-  sdfH = Math.round(sdfW * h / w);
 
   // Image(s) to render
   await loadImageTextures();
 
-  // SDF scene renderer's output texture
+  initSceneTexture();
+  initGistSeq();
+  initPrograms();
+
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+  });
+
+  requestAnimationFrame(frame);
+}
+
+function initSceneTexture() {
+
+  sdfW = Math.round(w / params.dotRad / 2);
+  sdfH = Math.round(sdfW * h / w);
+
   const dtScene = new Float32Array(sdfW * sdfH * 4);
   dtScene.fill(0);
   if (txScene) gl.deleteTexture(txScene);
@@ -77,20 +91,9 @@ async function setup() {
     width: sdfW,
     height: sdfH,
     src: dtScene,
-    // min: gl.NEAREST,
-    // max: gl.NEAREST,
     min: gl.LINEAR,
     max: gl.LINEAR,
   });
-
-  initGistSeq();
-  initPrograms();
-
-  window.addEventListener("resize", () => {
-    resizeCanvas();
-  });
-
-  requestAnimationFrame(frame);
 }
 
 async function loadImageTextures() {
@@ -107,10 +110,6 @@ async function loadImageTextures() {
       }
     });
   });
-  // txImg1 = twgl.createTexture(gl, { src: imgUrl1, mag: gl.NEAREST }, (err, texture, source) => {
-  //   img1W = source.width;
-  //   img1H = source.height;
-  // });
 }
 
 
@@ -147,6 +146,8 @@ function resizeCanvas() {
   webGLCanvas.style.height = elmHeight + "px";
   w = webGLCanvas.width = elmWidth * devicePixelRatio;
   h = webGLCanvas.height = elmHeight * devicePixelRatio;
+
+  initSceneTexture();
 }
 
 function initPrograms() {
@@ -260,6 +261,7 @@ function frame(time) {
   // Render scene texture to screen
   const unisDraw = {
     time: time,
+    dotRad: params.dotRad,
     txImg1: txImg1,
     img1Res: [img1W, img1H],
     txScene: txScene,

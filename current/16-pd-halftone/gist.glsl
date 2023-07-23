@@ -14,11 +14,11 @@ void view() {
     hei = 0.;
 
     light1Vec = angleToVec(azi, hei);
-    light1Strength = 0.6;
+    light1Strength = 0.3;
 
     light2Vec = angleToVec(30.0, -50.0);
-    light2Strength = 0.0;
-    ambientLightStrength = 0.2;
+    light2Strength = 0.1;
+    ambientLightStrength = 0.1;
 
 }
 
@@ -41,60 +41,52 @@ vec2 map(vec3 p) {
     vec2 res = vec2(1e13, 0.);
     float t = time + 500.;
 
-    //     {
-    //         vec3 q = p;
-    //         q -= vec3(5.25, 0., 0.);
-    //         q -= vec3(-c_ratio, c_ratio, 0.);
-    //         q = doRotX(q, t * 0.0001 + c_ratio * 1.);
-    //         float dia = c_ratio;
-    //         dia = 9.;
-    //         float d = sdTorus(q, vec2(dia, 1.5 + c_ratio * 0.5));
-    //         res = opU(res, vec2(d, 1.0));
-    //     }
+    // {
+    //     vec3 q = p;
+    //     q -= vec3(5.25, 0., 0.);
+    //     q -= vec3(-c_ratio, c_ratio, 0.);
+    //     q = doRotX(q, t * 0.0001 + c_ratio * 1.);
+    //     float dia = c_ratio;
+    //     dia = 9.;
+    //     float d = sdTorus(q, vec2(dia, 1.5 + c_ratio * 0.5));
+    //     res = opU(res, vec2(d, 1.0));
+    // }
 
-    //     {
-    //         vec3 q = p;
-    //         q.x -= -7.0;
-    //         float rad = 9.0;
-    //         float d = sdSphere(q, rad);
-    //         res = opU(res, vec2(d, 1.0));
-    //     }
+    // float rad = 2.;
+    // {
+    //     vec3 q = p;
+    //     // q -= vec3(11., 0., 0.);
+    //     vec2 id = opMod2(q.xy, vec2(rad * 5.0, rad * 3.3));
+    //     q = doRotY(q, PI * 0.4 * (sin(time * 0.001)));
+    //     float ax = random(floor(t * 0.005)) * 7.0 * PI;
+    //     ax = t * 0.001;
+    //     q = doRotX(q, ax);
+    //     float d = sdCutHollowSphere(q, rad, 0.1, 0.3);
+    //     res = opU(res, vec2(d, 10.0 + id.x * 0.7 + id.y * 0.2));
+    // }
+    // {
+    //     vec3 q = p;
+    //     q -= vec3(rad * 2.5, 0.0, -4.0);
+    //     vec2 id =opMod2(q.xy, vec2(rad * 5.0, rad * 3.3));
+    //     // q = doRotX(q, t * 0.001);
+    //     float d = sdBox(q, vec3(0.2, rad * 1.3, rad * 1.3));
+    //     res = opU(res, vec2(d, id.x * 0.9 + id.y * 0.7));
+    // }
 
-    //     float rad = 2.;
-    //     {
-    //         vec3 q = p;
-    //         // q -= vec3(11., 0., 0.);
-    //         vec2 id = opMod2(q.xy, vec2(rad * 5.0, rad * 3.3));
-    //         q = doRotY(q, PI * 0.4 * (sin(time * 0.001)));
-    //         float ax = random(floor(t * 0.005)) * 7.0 * PI;
-    //         ax = t * 0.001;
-    //         q = doRotX(q, ax);
-    //         float d = sdCutHollowSphere(q, rad, 0.1, 0.3);
-    //         res = opU(res, vec2(d, 10.0 + id.x * 0.7 + id.y * 0.2));
-    //     }
-    //     {
-    //         vec3 q = p;
-    //         q -= vec3(rad * 2.5, 0.0, -4.0);
-    //         vec2 id =opMod2(q.xy, vec2(rad * 5.0, rad * 3.3));
-    //         // q = doRotX(q, t * 0.001);
-    //         float d = sdBox(q, vec3(0.2, rad * 1.3, rad * 1.3));
-    //         res = opU(res, vec2(d, id.x * 0.9 + id.y * 0.7));
-    //     }
+    {
+        vec3 q = p;
+        float ay = t * 0.0001;
+        float sy = sin(t * 0.005) + 1.0;
+        // q = doRotY(q, ay);
+        // q = doRotY(q, c_index);
+        // q = doRotX(q, t * 0.0001);
+        q -= vec3(15., 5., -t * 0.01);
+        // if (sy < 0.1) q.x += 15.0;
 
-    //     {
-    //         vec3 q = p;
-    //         float ay = t * 0.0001;
-    //         float sy = sin(t * 0.005) + 1.0;
-    //         // q = doRotY(q, ay);
-    //         // q = doRotY(q, c_index);
-    //         // q = doRotX(q, t * 0.0001);
-    //         q -= vec3(15., 5., -t * 0.01);
-    //         // if (sy < 0.1) q.x += 15.0;
-
-    //         opMod2(q.yz, vec2(10., 12.));
-    //         float d = sdBox(q, vec3(5., 0.2, 4.));
-    //         res = opU(res, vec2(d, 1.0));
-    //     }
+        opMod2(q.yz, vec2(10., 12.));
+        float d = sdBox(q, vec3(5., 0.2, 4.));
+        // res = opU(res, vec2(d, 1.0));
+    }
     {
         vec3 q = p;
         q -= vec3(-9.0, 0., 0.);
@@ -123,7 +115,7 @@ vec2 map(vec3 p) {
         float dia = 10.0 * exp(-pow(abs(q.y * 0.4), 1.0) * 0.1);
         float d = sdSpiral(q, dia, 0.5, 1.0);
         d *= 0.5;
-        res = opU(res, vec2(d, 1.0));
+        // res = opU(res, vec2(d, 1.0));
     }
 
     return res;
@@ -150,11 +142,7 @@ vec2 getSurfaceGradient(sampler2D txScene, vec2 trgRes, ivec2 sc) {
 
 vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
 
-
-    float rad = 4.0;
-
-    // rad = c_index * 10.;
-    // rad = max(rad, 7.);
+    float rad = dotRad;
     float dia = rad * 2.0;
     vec2 cellXY = mod(trgCoord, dia) - vec2(rad);
     vec2 cellCenter = floor(trgCoord / dia) * dia + vec2(rad);
@@ -164,7 +152,7 @@ vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
     if (false) {
         vec4 ccc = texture(txScene, trgCoord / trgRes);
         float iid = ccc[3];
-        if (iid == 0.0) return vec4(0.0, 0.0, 0.2, 1.0);
+        //if (iid == 0.0) return vec4(0.0, 0.0, 0.2, 1.0);
         float lll = ccc[0];
         return vec4(vec3(lll), 1.0);
     }
@@ -196,24 +184,23 @@ vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
     uv.y = 1.0 - uv.y;
     vec4 clrImg = texture(txImg1, uv);
     float liImg = (clrImg.r + clrImg.g + clrImg.b) / 3.0;
-    liImg = pow(liImg, 0.7);
 
-    float hue = 0.1;
-    float sat = 0.3;
-    float li = pow(0.4, 2.9) * 0.7;
-    // BG always from scene
-    // li = pow(liScene, 2.9) * 0.8;
+    float hue, sat, li;
 
-    if (dstScene > 0.) {
-        li = pow(liScene, 3.0);
-        // hue = dstScene * 0.3;
-        // hue = idScene + 0.2;
-        sat = 0.1;
+    if (idScene > 0.) {
+        li = pow(liScene, 2.0);
+        hue = 233. / 360.;
+        sat = 0.6;
     }
-    // li = liImg;
-    vec3 clr = hsl2rgb(hue, sat, li);
+    else {
+        li = pow(liImg, 0.7) + 0.05;
+        hue = 0.;
+        sat = 0.;
+    }
 
-    if (length(cellXY) < rad * li)
+    vec3 clr = hsb2rgb(hue, sat, 1.0);
+
+    if (pow(length(cellXY / rad), 0.5) < li)
     return vec4(clr.rgb, 1.);
 
     return vec4(vec3(0.1), 1.);
