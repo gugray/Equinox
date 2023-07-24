@@ -24,7 +24,7 @@ let progiRender;                          // Renders final image
 
 const params = {
   animate: true,
-  dotRad: 5,
+  dotRad: 3,
 };
 
 const ctrl = {

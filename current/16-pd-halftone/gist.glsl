@@ -8,15 +8,13 @@ void view() {
     float azi = random(floor(time * 0.003)) * 170.0 - 85.0;
     float hei = random(floor(time * 0.003) + 0.3) * 170.0 - 85.0;
     azi = mod(time * 0.1, 360.0) - 180.0;
-    // hei = ((time * 0.00003) + 0.3) * 170.0 - 85.0;
-    azi = 60.0;
-    //hei = 30. * sin(time * 0.0003);
-    hei = 0.;
+    azi = -60.0;
+    hei = 40.;
 
     light1Vec = angleToVec(azi, hei);
     light1Strength = 0.3;
 
-    light2Vec = angleToVec(30.0, -50.0);
+    light2Vec = angleToVec(-70.0, 0.0);
     light2Strength = 0.1;
     ambientLightStrength = 0.1;
 
@@ -54,7 +52,7 @@ vec2 map(vec3 p) {
     //     res = opU(res, vec2(d, 1.0));
     // }
 
-    // Rotating moony loonies
+    // // Rotating moony loonies
     // float rad = 2.;
     // {
     //     vec3 q = p;
@@ -66,16 +64,16 @@ vec2 map(vec3 p) {
     //     q = doRotX(q, ax);
     //     float d = sdCutHollowSphere(q, rad, 0.1, 0.3);
     //     d *= 0.9; // This SDF needs a bit of help
-    //     res = opU(res, vec2(d, 10.0 + id.x * 0.7 + id.y * 0.2));
+    //     res = opU(res, vec2(d, 20.0));
     // }
-    // Loony separator walls
+    // // Loony separator walls
     // {
     //     vec3 q = p;
     //     q -= vec3(rad * 2.5, 0.0, -4.0);
     //     vec2 id =opMod2(q.xy, vec2(rad * 5.0, rad * 3.3));
     //     // q = doRotX(q, t * 0.001);
     //     float d = sdBox(q, vec3(0.2, rad * 1.3, rad * 1.3));
-    //     res = opU(res, vec2(d, id.x * 0.9 + id.y * 0.7));
+    //     res = opU(res, vec2(d, 20.0));
     // }
 
 
@@ -90,62 +88,92 @@ vec2 map(vec3 p) {
     //     q -= vec3(15., 5., -t * 0.01);
     //     opMod2(q.yz, vec2(10., 12.));
     //     float d = sdBox(q, vec3(5., 0.2, 4.));
-    //     res = opU(res, vec2(d, 1.0));
+    //     res = opU(res, vec2(d, 10.0));
     // }
 
     // Cubes composite
+    {
+        vec3 q = p;
+        float sz = 2.0;
+        float d;
+        q -= vec3(0.0, 0., 0.);
+        q = doRotX(q, t * 0.0001);
+        q = doRotY(q, t * 0.0002);
+        q = doRotZ(q, t * 0.0002);
+        float t1 = t * 0.001;
+        d = sdBox(q, sz * vec3(sin(t1) + 2.0, sin(t1 + PI * 0.3) + 2.0, sin(t1 + PI * 0.9) + 2.0));
+        res = opU(res, vec2(d, 3.1));
+        q = doRotX(q, 1.0);
+        q = doRotY(q, 2.0);
+        q = doRotZ(q, 3.0);
+        float t2 = t * 0.0013 + PI * 0.2;
+        d = sdBox(q, sz * vec3(sin(t2) + 2.0, sin(t2 + PI * 0.3) + 2.0, sin(t2 + PI * 0.9) + 2.0));
+        res = opU(res, vec2(d, 3.4));
+        q = doRotX(q, 3.0);
+        q = doRotY(q, 1.0);
+        q = doRotZ(q, 2.0);
+        float t3 = t * 0.0019 + PI * 0.4;
+        d = sdBox(q, sz * vec3(sin(t3) + 2.0, sin(t3 + PI * 0.3) + 2.0, sin(t3 + PI * 0.9) + 2.0));
+        res = opU(res, vec2(d, 3.7));
+    }
+
+    float wsep = 15.0;
+    // Wavy thingies
     // {
     //     vec3 q = p;
-    //     q -= vec3(-9.0, 0., 0.);
-    //     q = doRotX(q, t * 0.0001);
-    //     q = doRotY(q, t * 0.0002);
-    //     q = doRotZ(q, t * 0.0002);
-    //     float d = sdBox(q, vec3(5.0));
-    //     q = doRotX(q, 1.0);
-    //     q = doRotY(q, 2.0);
-    //     q = doRotZ(q, 3.0);
-    //     d = min(d, sdBox(q, vec3(5.0)));
-    //     q = doRotX(q, 3.0);
-    //     q = doRotY(q, 1.0);
-    //     q = doRotZ(q, 2.0);
-    //     d = min(d, sdBox(q, vec3(5.0)));
+    //     q.x += wsep * 0.3;
+    //     q.z += wsep * 0.7;
+    //     q.y += 5.0;
+    //     q = doRotZ(q, sin(t * 0.00061) * 0.2);
+    //     q = doRotX(q, sin(t * 0.00049) * 0.2);
+    //     q = doRotX(q, PI * 0.05);
+    //     vec2 id = opMod2(q.xz, vec2(wsep));
+    //     vec2 ctr = id * wsep;
+    //     q.y += sin(ctr.x * 0.05 + ctr.y * 0.02 + t * 0.001) * 3.0;
+    //     float ynz = snoise(vec3(ctr.xy * 0.1, t * 0.0003));
+    //     q.y += ynz * 3.0;
+    //     q.x += (random(ctr.x) - 0.5) * wsep * 0.2;
+    //     q.z += (random(ctr.y) - 0.5) * wsep * 0.1;
+    //     // Till here
+    //     float d = sdSphere(q, 2.5);
+    //     d *= 0.75;
     //     res = opU(res, vec2(d, 1.0));
     // }
 
     // Spiral experiment
     // {
     //     vec3 q = p;
-    //     q -= vec3(11.0, 0.0, 0.0);
-    //     q = doRotZ(q, t * 0.001);
-    //     q = doRotX(q, t * 0.001);
-    //     // float d = length(q.yz - vec2(1.5*sin(q.x), 0.)) - 1.0;
-    //     // q = doRotY(q, t * 0.001);
-    //     float dia = 10.0 * exp(-pow(abs(q.y * 0.4), 1.0) * 0.1);
-    //     float d = sdSpiral(q, dia, 0.5, 1.0);
-    //     d *= 0.5;
-    //     res = opU(res, vec2(d, 1.0));
+    //     q.z += wsep * 2.5;
+    //     q.x += wsep * 0.3;
+    //     q.z += wsep * 0.7;
+    //     q = doRotZ(q, sin(t * 0.00061) * 0.2);
+    //     q = doRotX(q, sin(t * 0.00049) * 0.2);
+    //     q = doRotX(q, PI * 0.05);
+    //     // q = doRotZ(q, PI * 0.5);
+    //     q = doRotY(q, t * 0.003);
+    //     float dia = 40.0 * exp(-pow(abs(q.y * 0.4), 1.0) * 0.1);
+    //     float e = sdSpiral(q, dia, 0.3, 1.0);
+    //     e *= 0.5;
+    //     res = opU(res, vec2(e, 2.0));
     // }
 
+    // Transmuter
+    {
+        vec3 q = p;
+        float sz =8.0 + 5.0 * pow((sin(t * 0.01) + 1.0), 0.5);
+        q = doRotY(q, t * 0.001);
+        q = doRotX(q, PI * 0.5);
+        float d1 = sdTorus(q, vec2(sz, sz*0.15));
+        d1 = min(d1, sdTorus(doRotX(q, PI * 0.5), vec2(sz, sz*0.15)));
+        d1 = min(d1, sdTorus(doRotZ(q, PI * 0.5), vec2(sz, sz*0.15)));
+        float d2 = sdBoxFrame(q, vec3(sz), sz*0.12);
+        float v = (sin(t * 0.003) + 1.0) * 0.5;
+        // v = 0.5 + 0.1 * sin(t * 0.003);
+        float d = (d1*v+d2*(1.0-v));
+        res = opU(res, vec2(d, 7.0));
+    }
+
     return res;
-}
-
-vec2 getSurfaceGradient(sampler2D txScene, vec2 trgRes, ivec2 sc) {
-
-    int delta = 2;
-
-    ivec2 scAbove = ivec2(sc.x, min(int(trgRes.y - 1.), sc.y + delta));
-    ivec2 scBelow = ivec2(sc.x, max(0, sc.y - delta));
-    ivec2 scRight = ivec2(min(int(trgRes.x - 1.), sc.x + delta), sc.y);
-    ivec2 scLeft = ivec2(max(0, sc.x - delta), sc.y);
-
-    vec4 fieldAbove = texelFetch(txScene, scAbove, 0);
-    vec4 fieldBelow = texelFetch(txScene, scBelow, 0);
-    vec4 fieldRight = texelFetch(txScene, scRight, 0);
-    vec4 fieldLeft = texelFetch(txScene, scLeft, 0);
-
-    float gradX = fieldRight.x - fieldLeft.x;
-    float gradY = fieldAbove.x - fieldBelow.x;
-    return vec2(gradX, gradY);
 }
 
 vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
@@ -160,7 +188,7 @@ vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
     if (false) {
         vec4 ccc = texture(txScene, trgCoord / trgRes);
         float iid = ccc[3];
-        //if (iid == 0.0) return vec4(0.0, 0.0, 0.2, 1.0);
+        // if (iid == 0.0) return vec4(0.0, 0.0, 0.2, 1.0);
         float lll = ccc[0];
         return vec4(vec3(lll), 1.0);
     }
@@ -184,7 +212,8 @@ vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
     //     	return vec4(0.1, 0.1, 0.1, 1.);
 
 
-    vec4 clrScene = texture(txScene, uv);
+    // vec4 clrScene = texture(txScene, uv);
+    vec4 clrScene = texelFetch(txScene, ivec2(trgCoord / dotRad / 2.0), 0);
     float liScene = clrScene[2];
     float dstScene = clrScene[1];
     float idScene = clrScene[3];
@@ -195,16 +224,44 @@ vec4 renderScene(vec2 trgCoord, vec2 trgRes, sampler2D txScene, vec2 sceneRes) {
 
     float hue, sat, li;
 
-    if (idScene > 0.) {
-        li = pow(liScene, 2.0);
-        hue = 233. / 360.;
-        sat = 0.6;
+    if (idScene > 0.0) {
+        li = pow(liScene, 1.0);
+        // Infinite conveyor belt
+        if (idScene == 10.0) {
+            hue = 29./360.;
+            sat = 0.1;
+        }
+        // Water thingies
+        else if (idScene >= 1.0 && idScene < 2.0) {
+            hue = 237. / 360.;
+            sat = 0.6;
+        }
+        // Spiral
+        else if (idScene == 2.0) {
+            hue = 0.0;
+            sat = 0.6;
+        }
+        // Transmuter
+        else if (idScene == 7.0) {
+            hue = 11.0 / 360.0;
+            sat = 0.4;
+        }
+        // Cube composite
+        else if (idScene >= 3.0 && idScene < 4.0) {
+            hue = fract(idScene);
+            sat = 0.1;
+        }
+        // Default sepia
+        else {
+            hue = 29. / 360.;
+            sat = 0.1;
+        }
     }
     else {
-        li = pow(liImg, 0.7) + 0.05;
-        li = 0.0;
-        hue = 0.;
-        sat = 0.;
+        li = pow(liImg, 1.0) + 0.07;
+        // li = 0.0;
+        hue = 29./360.;
+        sat = 0.1;
     }
 
     vec3 clr = hsb2rgb(hue, sat, 1.0);
