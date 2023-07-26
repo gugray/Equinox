@@ -4,6 +4,7 @@ public/*.html
 public/*.wasm
 
 public/dance
+public/imgs
 
 zig/out
 zig/data.txt
