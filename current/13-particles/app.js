@@ -55,10 +55,10 @@ const params = {
     l1_azimuth: -75,
     l1_altitude: 60,
     l1_strength: 0.3,
-    l2_azimuth: -75,
-    l2_altitude: 30,
-    l2_strength: 0,
-    amb_strength: 0.05,
+    l2_azimuth: 35,
+    l2_altitude: 80,
+    l2_strength: 0.1,
+    amb_strength: 0.07,
   },
 }
 
@@ -344,6 +344,7 @@ function frame(time) {
     sceneRes: [sdfW, sdfH],
     trgRes: [w, h],
     time: time,
+    xrnd: Math.random(),
   };
   let atmsPU = [{attachment: txParticleState1}];
   let fbufPU = twgl.createFramebufferInfo(gl, atmsPU, szParticleState, szParticleState);
@@ -362,9 +363,7 @@ function frame(time) {
     particles: txParticleState0,
     szParticleState: szParticleState,
     resolution: [w, h],
-    pointSize: 1 * devicePixelRatio,
   };
-  unisParticleRender.pointSize = 1;
   let atmsPR = [{attachment: txOutput1}];
   let fbufPR = twgl.createFramebufferInfo(gl, atmsPR, w, h);
   twgl.bindFramebufferInfo(gl, fbufPR);

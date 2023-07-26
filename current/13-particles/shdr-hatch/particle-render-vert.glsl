@@ -1,10 +1,15 @@
 #version 300 es
 
+#include "../shdr-share/consts.glsl"
+#include "../shdr-share/geo.glsl"
+#include "../shdr-share/sdf.glsl"
+#include "../shdr-share/utils.glsl"
+// GIST.GLSL
+
 in float index;
 uniform sampler2D particles;
 uniform float szParticleState;
 uniform vec2 resolution;
-uniform float pointSize;
 out vec2 props;
 
 void main() {
@@ -14,6 +19,8 @@ void main() {
     gl_Position = vec4(1.);
     gl_Position.xy = vec2(-1.) + 2. * pstate.xy / resolution;
     props = pstate.zw;
+
+    preRender();
 
     gl_PointSize = pointSize;
 }

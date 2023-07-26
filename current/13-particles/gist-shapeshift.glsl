@@ -1,5 +1,6 @@
+
 void preRender() {
-    pointSize = 2.0;
+    pointSize = 1.0;
 }
 
 vec2 map(vec3 p) {
@@ -10,6 +11,25 @@ vec2 map(vec3 p) {
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
 
+    {
+        vec3 q = p;
+
+
+        q = doRotX(q, PI * 0.07);
+        q = doRotY(q, t * 0.00005);
+        float id = opCircRep(q.xz, 5.0);
+        q -= vec3(8.0, 0.0, 0.0);
+
+        float d1 = sdTorus(q, vec2(3.5, 0.5));
+        d1 = min(d1, sdTorus(doRotX(q, PI*0.5), vec2(3.5, 0.5)));
+        d1 = min(d1, sdTorus(doRotZ(q, PI*0.5), vec2(3.5, 0.5)));
+        float d2 = sdBoxFrame(q, vec3(3.5), 0.5);
+
+        float k = (sin(t*0.0007) + 1.0) * 0.5;
+
+        float d = d1 * k + d2 * (1.0 -k);
+        res = opU(res, vec2(d, 30.0+(id +2.5)/5.0));
+    }
 
 
     {
@@ -147,23 +167,24 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
 
 
     // Move this particle!
-    // res.xy += noiseHi * 0.5;
+    res.xy += noiseHi * 0.5;
     // Small good white noise needed to keep from losing them
     res.xy += vec2(random(prevState.y+ 7.0 * xrnd) - 0.5, random(prevState.x + 13.0 * xrnd) - 0.5) * 1.;
-    // res.xy += noiseLo * 2.0;
+    // res.xy += noiseLo * 500.0;
 
     res.xy = mod(res.xy, trgRes);
     res.zw = vec2(0.);
+
 
     // Novas
     if (false)
     {
         res.zw = vec2(0.);
-        float lim = 0.88;
+        float lim = 0.68;
         float len = length(nNova);
         if (len > lim) {
             float lum = map(len, lim, 1.0, 0.0, 1.0);
-            res.z = pow(lum, 0.5) *  0.6; // Lum
+            res.z = pow(lum, 0.5) *  0.8; // Lum
             res.w = 100.; // ID
             return res;
         }

@@ -4,3 +4,5 @@ const float MAX_DIST = 50.0;
 const float EPSILON = 0.001;
 
 uniform float time;
+uniform float xrnd;
+float pointSize = 1.0;
