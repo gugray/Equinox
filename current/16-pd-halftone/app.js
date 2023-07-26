@@ -7,8 +7,10 @@ import {init} from "../../src/init.js";
 import * as twgl from "twgl.js";
 import * as H from "./history.js";
 import {Editor} from "./editor.js";
+import {rand} from "../../src/random";
 
-const imgUrl1= "imgs/01-taucher.jpg";
+// const imgUrl1= "imgs/01-taucher.jpg";
+const imgUrl1= "imgs/100-swim.png";
 
 const wsPort = 2908;
 
@@ -96,9 +98,31 @@ function initSceneTexture() {
   });
 }
 
+// let prefi = "g";
+// let curri = 93;
+// let mini = 93;
+// let maxi = 108;
+
+// let prefi = "h";
+// let curri = 130;
+// let mini = 130;
+
+// let maxi = 328;
+
+let prefi = "i";
+let curri = 1;
+let mini = 1;
+let maxi = 645;
+
 async function loadImageTextures() {
+  let ix = curri.toString().padStart(4, '0');
+  ++curri;
+  if (curri > maxi) curri = mini;
+  const url = "imgs/im" + prefi + "_" + ix + ".png";
+  // const url = imgUrl1;
+  setTimeout(async () => await loadImageTextures(), 250);
   return new Promise((resolve, reject) => {
-    twgl.createTexture(gl, { src: imgUrl1, mag: gl.NEAREST }, (err, texture, source) => {
+    twgl.createTexture(gl, { src: url, mag: gl.NEAREST }, (err, texture, source) => {
       if (err) {
         reject(err);
       }
