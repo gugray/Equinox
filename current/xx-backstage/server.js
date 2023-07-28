@@ -15,7 +15,7 @@ function handleConnection(conn) {
   conn.on("error", onConnError);
   function onConnData(d) {
     const msg = d.toString("ascii").trim();
-    console.log("TCP message: " + msg);
+    // console.log("TCP message: " + msg);
     for (const ws of openSendSockets) {
       try { ws.send(msg); }
       catch (error) {

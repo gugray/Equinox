@@ -9,8 +9,8 @@ import * as H from "./history.js";
 import {Editor} from "./editor.js";
 import {rand} from "../../src/random";
 
-// const imgUrl1= "imgs/01-taucher.jpg";
-const imgUrl1= "imgs/100-swim.png";
+const imgUrl1= "imgs/01-taucher.jpg";
+const imgUrl2= "imgs/02-kopfstand.jpg";
 
 const wsPort = 2908;
 
@@ -20,6 +20,7 @@ let sdfW = 480, sdfH;
 let seqId, newSeq, seqTimeStart;
 let sweepArrays, sweepBufferInfo;         // Used to drive simple vertex shader behind fragment renderers
 let txImg1, img1W, img1H;                 // Image to render
+let txPrev;                               // Previous texture, to delete
 let txScene;                              // Texture holding SDF scene and direction/darkness/depth
 let progiScene;                           // Draws raytraced SDF scene
 let progiRender;                          // Renders final image
@@ -30,11 +31,23 @@ const params = {
 };
 
 const ctrl = {
-  ratio: 0,
-  index: 0,
+  bpm: 125,
   note: 0,
-  vala: 10,
-  valb: 10,
+  tick: 0,
+  vala: 0,
+  valb: 0,
+  valc: 0,
+  suma: 0,
+  sumb: 0,
+  sumc: 0,
+  m1: 0,
+  m2: 0,
+  m3: 0,
+  m4: 0,
+  m5: 0,
+  m6: 0,
+  m7: 0,
+  s1: 0,
 };
 
 document.body.classList.add("full");
@@ -98,30 +111,73 @@ function initSceneTexture() {
   });
 }
 
-// let prefi = "g";
-// let curri = 93;
-// let mini = 93;
-// let maxi = 108;
+const clip1 = {
+  prefi: "g",
+  mini: 93,
+  maxi: 108,
+};
 
-// let prefi = "h";
-// let curri = 130;
-// let mini = 130;
+const clip2 = {
+  prefi: "h",
+  mini: 130,
+  maxi: 328,
+};
 
-// let maxi = 328;
+const clip3 = {
+  prefi: "i",
+  mini: 11,
+  maxi: 645,
+};
 
-let prefi = "i";
-let curri = 1;
-let mini = 1;
-let maxi = 645;
+const clip4 = {
+  prefi: "gt",
+  mini: 1,
+  maxi: 242,
+};
+
+const bgCtrl = {
+  s1: -1,
+  clip: null,
+}
+
+async function movieTick(count) {
+  if (bgCtrl.clip == null) return;
+  bgCtrl.curri += Math.round(count);
+  const len = bgCtrl.clip.maxi - bgCtrl.clip.mini;
+  while (bgCtrl.curri < bgCtrl.clip.mini) bgCtrl.curri += len;
+  while (bgCtrl.curri > bgCtrl.clip.maxi) bgCtrl.curri -= len;
+  await loadImageTextures();
+}
 
 async function loadImageTextures() {
-  let ix = curri.toString().padStart(4, '0');
-  ++curri;
-  if (curri > maxi) curri = mini;
-  const url = "imgs/im" + prefi + "_" + ix + ".png";
-  // const url = imgUrl1;
-  setTimeout(async () => await loadImageTextures(), 250);
+
+  const needToLoad = bgCtrl.s1 != ctrl.s1 || bgCtrl.clip != null;
+  if (!needToLoad) return;
+
+  let url = imgUrl1;
+
+  if (ctrl.s1 != bgCtrl.s1) {
+    bgCtrl.s1 = ctrl.s1;
+    if (bgCtrl.s1 == 1) bgCtrl.clip = clip1;
+    else if (bgCtrl.s1 == 2) bgCtrl.clip = clip2;
+    else if (bgCtrl.s1 == 3) bgCtrl.clip = clip3;
+    else if (bgCtrl.s1 == 4) bgCtrl.clip = clip4;
+    else bgCtrl.clip = null;
+    if (bgCtrl.clip != null) bgCtrl.curri = bgCtrl.clip.mini;
+    if (bgCtrl.s1 == 6) url = imgUrl2;
+  }
+
+  if (bgCtrl.clip != null) {
+    let ix = bgCtrl.curri.toString().padStart(4, '0');
+    url = "imgs/im" + bgCtrl.clip.prefi + "_" + ix + ".png";
+  }
+
   return new Promise((resolve, reject) => {
+    if (txPrev) {
+      gl.deleteTexture(txPrev);
+      txPrev = null;
+    }
+    if (txImg1) txPrev = txImg1;
     twgl.createTexture(gl, { src: url, mag: gl.NEAREST }, (err, texture, source) => {
       if (err) {
         reject(err);
@@ -136,6 +192,35 @@ async function loadImageTextures() {
   });
 }
 
+function handleVal(name, val) {
+}
+
+function handleCtrlMessage(msg) {
+  const parts = msg.split(" ");
+  if (parts.length < 2) return;
+  const name = parts[0];
+  if (!ctrl.hasOwnProperty(name)) return;
+  const val = parseFloat(parts[1]);
+  if (name.startsWith("val")) {
+    ctrl[name] = val;
+    const n2 = name.replace("val", "sum");
+    ctrl[n2] += val;
+    handleVal(name, val);
+  }
+  else if (name.startsWith("m")) {
+    ctrl[name] = 2 * val + parseFloat(parts[2]);
+  }
+  else if (name == "tick") {
+    ctrl[name] = val;
+    movieTick(1);
+  }
+  else if (name == "s1") {
+    ctrl[name] = val;
+    loadImageTextures();
+  }
+  else ctrl[name] = val;
+
+}
 
 function initSocket() {
   const socket = new WebSocket("ws://localhost:" + wsPort);
@@ -151,10 +236,9 @@ function initSocket() {
     }
     else {
       const items = msg.split("\n").map(line => line.trim().replace(/;+$/, ""));
+      // console.log(msg); // DBG
       for (const itm of items) {
-        const parts = itm.split(" ");
-        if (parts.length < 2) continue;
-        if (ctrl.hasOwnProperty(parts[0])) ctrl[parts[0]] = parts[1];
+        handleCtrlMessage(itm);
       }
     }
   });
