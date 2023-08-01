@@ -1,3 +1,5 @@
+//GIST
+
 void view() {
     eyeFOV = 55.0 * PI / 180.0;
     eyeAzimuth = 0.001 * PI / 180.0;
@@ -64,6 +66,33 @@ vec2 map(vec3 p) {
     vec2 res = vec2(1e13, 0.);
     float t = time + 500.;
 
+    // Impro
+    {
+        float tt = t + c_suma * 1000.0;
+        float tb = t + c_sumb * 1000.0;
+        float mul = c_valc;
+        vec3 q = p;
+        float r1 = 10.0;
+        float sz = 5.0 + 1.5 * sin(t * 0.004);
+        sz = 5.0;
+        // q.x -= r1 * sin(tt * 0.0005);
+        // q.z -= r1 * cos(tt * 0.0005);
+        {
+            vec3 q = q;
+            // q = doRotY(q, -tb * 0.002 * mul);
+            // q = doRotX(q, PI * 0.20);
+            // q = doRotZ(q, PI * 0.25);
+            float d = sdBoxFrame(q, vec3(sz), 0.5);
+            res = opU(res, vec2(d, 5.0));
+        }
+        // {
+        //     vec3 q = q;
+        //     q = doRotY(q, tb * 0.003 * mul * 1.2);
+        //     q = doRotX(q, PI*0.5);
+        //     float d = sdTorus(q, vec2(sz * 2., 0.5));
+        //     res = opU(res, vec2(d, 5.6));
+        // }
+    }
 
     // Rotating moony loonies
     float rad = 1.;
@@ -143,12 +172,12 @@ vec2 map(vec3 p) {
     // Infinite conveyor belt
     if (c_m4 != 0.0)
     {
+        float t1 = t + c_suma * 1000.0;
+        float t2 = t + c_sumb * 1000.0;
         vec3 q = p;
-        float ay = t * 0.0001;
-        float sy = sin(t * 0.005) + 1.0;
-        // q = doRotY(q, ay);
-        // q = doRotY(q, c_index);
-        // q = doRotX(q, t * 0.0001);
+        float sy = sin(t2 * 0.005) + 1.0;
+        q = doRotY(q, t1 * 0.0001);
+        q = doRotX(q, t2 * 0.0001);
         q -= vec3(15., 5., -t * 0.01);
         opMod2(q.yz, vec2(10., 12.));
         float d = sdBox(q, vec3(5., 0.2, 4.));
@@ -209,7 +238,7 @@ vec2 map(vec3 p) {
         // Anchored
         {
             vec3 q = p;
-            // q.y -= 5.0 * sin(t * 0.001);
+            //q.y -= 5.0 * sin(t * 0.001);
             q -= vec3(0.0, 0.0, -60.0);
             // q = doRotY(q, t * 0.0001);
             res = fleet(q, res, 9.0, 27.0, 15.0, 0.0, true);
