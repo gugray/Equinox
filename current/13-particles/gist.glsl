@@ -1,91 +1,32 @@
+// ===========================
+//    Hello TOPLAP
+//
+//  Enjoy the solstice O o . _
+//
+//              \o/  ~ gabor ~
+// ===========================
+
 void preRender() {
-    pointSize = 2.0;
+    pointSize = 1.0;
 }
 
 vec2 map(vec3 p) {
 
-    // sdOctahedron(q, 1.5) - 0.01;
-    // opCircRep(q.xz, 2.);
+    // float d = sdBoxFrame(q, sz, th);
+    // res = opU(res, vec2(d, 1.));
 
     vec2 res = vec2(1e10, 0.);
     float t = time + 500.;
-
-
 
     {
         vec3 p = p;
         p -= vec3(4., 0., 0);
 
-        // p -= vec3(0.0, -5.0, 0);
-        // p = doRotX(p, 0.1 * sin(t * 0.001));
-        // p = doRotZ(p, 0.1 * cos(t * 0.001));
-        // p -= vec3(0.0, 5.0, 0);
+        {
+            vec3 q = p;
 
-        // Spinny donut
-        // {
-        //     vec3 q = p;
-        //     q = doRotY(q, t * 0.0003);
-        //     q = doRotX(q, PI * 0.5);
-        //     float d = sdTorus(q, vec2(4., 1.2));
-        //     res = opU(res, vec2(d, 1.));
-        // }
-
-        // Trunk
-        // {
-        //     vec3 q = p;
-        //     q -= vec3(0.0, -1.0, 0.0);
-        //     float d = sdCappedCylinder(q, vec2(0.8, 7.));
-        //     res = opU(res, vec2(d, 2.0));
-        // }
-
-        // Inner ring
-        // {
-        //     vec3 q = p;
-        //     q -= vec3(0.0, 4.0 * sin(t * 0.0007), 0.0);
-        //     float d = sdTorus(q, vec2(2.7, 0.5));
-        //     res = opU(res, vec2(d, 4.0));
-        // }
-
-        // Outer ring
-        // {
-        //     vec3 q = p;
-        //     q -= vec3(0.0, 4.0 * sin(t * 0.0005), 0.0);
-        //     float d = sdTorus(q, vec2(4.7, 0.5));
-        //     res = opU(res, vec2(d, 4.0));
-        // }
-
-        // Sentinels
-        // {
-        //     vec3 q = p;
-        //     q -= vec3(0.0, -5.0, 0.0);
-        //     q = doRotY(q, t * 0.0001);
-        //     float id = opCircRep(q.xz, 13.0);
-        //     float dst = 8.0 + 1.0 * pow(sin(t * 0.001) + 1.0, 2.0);
-        //     q -= vec3(dst, 0.0, 0.0);
-        //     q = doRotZ(q, t * 0.001);
-        //     float d = sdOctahedron(q, 1.0);
-        //     res = opU(res, vec2(d, 3.0));
-        // }
+        }
     }
-
-    // {
-    //     float id = 0.1;
-    // 	vec3 q = p;
-
-    //     q = doRotY(q, t * 0.0002);
-
-    //     id = opCircRep(q.xz, 3.0);
-    //     q -= vec3(8.0, 0.0, 0.0);
-
-    //     float d1 = sdBoxFrame(q, vec3(3.5), 0.5);
-    //     float d2 = sdTorus(q, vec2(3.5, 0.5));
-    //     d2 = min(d2, sdTorus(doRotZ(q, PI*0.5), vec2(3.5, 0.5)));
-    //     d2 = min(d2, sdTorus(doRotX(q, PI*0.5), vec2(3.5, 0.5)));
-
-    //     float k = (sin(t * 0.002) + 1.0) * 0.5;
-    //     float d = d1 * k + d2 * (1.0 - k);
-    //     res = opU(res, vec2(d, 30.0 + (id + 3.5) / 3.0));
-    // }
 
     return res;
 }
@@ -126,7 +67,7 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
     vec2 noiseLo;
     vec2 nNova;
     {
-        float freq = 11.;
+        float freq = 21.;
         float nofsX = snoise(vec3(uv * freq, t * 0.0001));
         float nofsY = snoise(vec3(uv * freq, 100. + t * 0.0001));
         noiseHi = vec2(nofsX, nofsY);
@@ -138,6 +79,7 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
         noiseLo = vec2(nofsX, nofsY);
         noiseLo = normalize(noiseLo);
     }
+
     {
         float freq = 5.;
         float nofsX = snoise(vec3(uv * freq, 10. + t * 0.0001));
@@ -147,10 +89,10 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
 
 
     // Move this particle!
-    // res.xy += noiseHi * 0.5;
+    // res.xy += noiseHi * 0.3;
     // Small good white noise needed to keep from losing them
     res.xy += vec2(random(prevState.y+ 7.0 * xrnd) - 0.5, random(prevState.x + 13.0 * xrnd) - 0.5) * 1.;
-    // res.xy += noiseLo * 2.0;
+    res.xy += noiseLo * 0.;
 
     res.xy = mod(res.xy, trgRes);
     res.zw = vec2(0.);
@@ -159,7 +101,7 @@ vec4 updateParticle(vec4 prevState, sampler2D txScene, vec2 sceneRes, vec2 trgRe
     if (false)
     {
         res.zw = vec2(0.);
-        float lim = 0.88;
+        float lim = 0.75 + 0.1 * sin(t * 0.00005);
         float len = length(nNova);
         if (len > lim) {
             float lum = map(len, lim, 1.0, 0.0, 1.0);
@@ -216,31 +158,18 @@ vec3 renderParticle(vec2 coord, vec2 resolution, vec2 props) {
     float id = props.y;
     float fsat = 1.0;
     float flum = 1.0;
-    // id = 0.;
 
     res.rgb = hsl2rgb(0.7, 0.4 * fsat, 0.6 * flum);
 
-    // Whatevs; donut?
+    // Metal red
     if (id == 1.) {
         res.rgb = hsl2rgb(0.02, 0.3 * fsat, lum * flum);
     }
-    // Trunk
-    else if (id == 2.) {
-        res.rgb = hsl2rgb(0.02, 0.2 * fsat, lum * flum);
-    }
-    // Sentinels
-    else if (id == 3.) {
-        res.rgb = hsl2rgb(0.0, 0.8 * fsat, lum * 0.8 * flum);
-    }
-    // Inner ring
+    // Leafy green
     else if (id == 4.) {
         res.rgb = hsl2rgb(0.4, 0.1 * fsat, lum * 0.8 * flum);
     }
-    // Anything with custom color
-    else if (id >= 30.0 && id < 40.0) {
-        res.rgb = hsl2rgb(id - 30.0, 0.4 * fsat, lum * flum);
-    }
-    // Novas
+    // Nova yellow
     else if (id == 100.) {
         res.rgb = hsl2rgb(0.1, 0.4 * fsat, lum * flum);
     }

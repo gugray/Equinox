@@ -59,7 +59,7 @@ async function build() {
     minify: args.prod,
     plugins: [
       myGlsl(),
-      customTasks({prod, pubDir}),
+      customTasks({prod, pubDir, sketch: args.sketch}),
     ],
     watch: watch,
   }).catch(err => {

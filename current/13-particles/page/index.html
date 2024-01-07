@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>~ shade ~</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="stylesheet" href="./codemirror.min.css">
+  <link rel="stylesheet" href="./monokai.min.css">
+  <link rel="stylesheet" href="./app.css" id="app-css">
+  <script defer src="./app.js" type="module" id="app-js"></script>
+</head>
+<body>
+
+  <canvas id="canv3d"></canvas>
+  <canvas id="canv2d"></canvas>
+
+  <footer>
+    <a id="download">Download</a>
+    <div id="update">Shade!</div>
+  </footer>
+
+  <div id="shaderEditorBox"><div id="editorBg"></div></div>
+
+  <div id="credits">
+    <p>
+      Visuals by gabor<br>
+      IG @gbrgnrt
+    </p>
+    <p>
+      Dancer: Amelie / Meraki Crew<br>
+      IG @mraki.crew
+    </p>
+    <p>
+      Motion capture: Interfaces by philipp7pc<br>
+      IG @philipp7pc
+    </p>
+  </div>
+
+  <!--LiveReload-->
+  <script>
+    if (window.location.port != 8081) {
+      document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] +
+        ':35729/livereload.js?snipver=1"></' + 'script>');
+    }
+  </script>
+  <!--LiveReload-->
+</body>
+</html>

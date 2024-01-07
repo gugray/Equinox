@@ -6,7 +6,7 @@ import sParticleUpdateFrag from "shdr-hatch/particle-update-frag.glsl";
 import sOutputDrawFrag from "shdr-hatch/output-draw-frag.glsl";
 import sGist from "./gist.glsl";
 
-import {init} from "../../src/init.js";
+import {init} from "./page/init.js";
 import * as twgl from "twgl.js";
 import * as H from "./history.js";
 import {Editor} from "./editor.js";

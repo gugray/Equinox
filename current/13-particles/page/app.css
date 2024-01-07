@@ -1,0 +1,50 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+  background-color: #282828;
+}
+body { }
+canvas { display: none; position: fixed; top: 32px; left: 32px; }
+body.full canvas { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+canvas#c { background-color: black; }
+canvas#d { background-color: transparent; }
+footer {
+  position: fixed; bottom: 0; width: 100%; z-index: 1; padding: 10px; margin: 0;
+  font-family: sans-serif; color: #ccc; background-color: #20202080;
+}
+footer div { float: right; color: #808080; margin-left: 10px; }
+footer a#download { display: none; float: right; margin-left: 10px; color: hsl(240, 57%, 62%); text-decoration: none; }
+
+#credits {
+  display: none;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; padding: 100px 0 0 20%;
+  background-color: black; opacity: 0.5; color: white;
+  font-family: sans-serif; font-size: 48px; font-weight: 200;
+}
+#credits.visible { display: block; }
+
+#shaderEditorBox {
+  display: none; position: fixed; top: 32px; left: 32px;
+  background-color: transparent; opacity: 0.0;  /* 0.3 to keep a hint when disabled */
+  width: 800px; height: calc(100% - 64px);
+}
+#editorBg {
+  position: absolute; width: 100%; height: 100%;
+  background-color: black; opacity: 0;
+  transition: background-color ease-out 1.5s;
+}
+#editorBg.error { background-color: red; transition: none; }
+#editorBg.apply { background-color: #aaa; transition: none; }
+#shaderEditorBox.focused { opacity: 1; }
+#shaderEditorBox.focused #editorBg {  opacity: 0.6; }
+#shaderEditorBox .CodeMirror { height: 100%; }
+#shaderEditorBox .CodeMirror,
+#shaderEditorBox .CodeMirror-gutters {
+  background-color: transparent;
+}
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar,
+.CodeMirror-scrollbar-filler {
+  visibility: hidden;
+}
+#shaderEditorBox span.cm-comment { color: #a4c7a4; }
